@@ -13,7 +13,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 
-const BUCKET = "lead-documents";
+import { DOCUMENT_BUCKET as BUCKET, listLeadDocuments } from "@/lib/lead-documents";
 const MAX_SIZE = 20 * 1024 * 1024;
 const MIME: Record<string, string> = {
   pdf: "application/pdf",
@@ -71,28 +71,7 @@ export function LeadDocuments({ id }: { id: string }) {
     refetch,
   } = useQuery({
     queryKey,
-    queryFn: async () => {
-      const groups = await Promise.all(
-        (["quote", "contract"] as const).map(async (category) => {
-          const rows = [];
-          for (let offset = 0; ; offset += 100) {
-            const { data, error } = await supabase.storage.from(BUCKET).list(`${id}/${category}`, {
-              limit: 100,
-              offset,
-              sortBy: { column: "created_at", order: "desc" },
-            });
-            if (error) throw error;
-            rows.push(
-              ...data
-                .filter((row) => row.id)
-                .map((row) => ({ ...row, category, path: `${id}/${category}/${row.name}` })),
-            );
-            if (data.length < 100) return rows;
-          }
-        }),
-      );
-      return groups.flat().sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
-    },
+    queryFn: () => listLeadDocuments(id),
   });
   const upload = useMutation({
     mutationFn: async ({ selected, category }: { selected: File; category: Kind }) => {
@@ -113,7 +92,10 @@ export function LeadDocuments({ id }: { id: string }) {
     onSuccess: async () => {
       setFile(null);
       if (input.current) input.current.value = "";
-      await client.invalidateQueries({ queryKey });
+      await Promise.all([
+        client.invalidateQueries({ queryKey }),
+        client.invalidateQueries({ queryKey: ["document-library"] }),
+      ]);
       toast.success(nl ? "Document geüpload" : "Document uploaded");
     },
     onError: () =>

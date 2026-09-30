@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { DocumentLibrary } from "@/components/DocumentLibrary";
 import { DocumentsHero } from "@/components/LeadDocuments";
 import { usePipelineLeads } from "@/hooks/use-pipeline-leads";
 import { useLanguage } from "@/hooks/use-language";
@@ -18,8 +19,8 @@ function DocumentsPage() {
         <h1 className="text-4xl">{nl ? "Offertes & contracten" : "Quotes & contracts"}</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {nl
-            ? "Kies een prospect om offertes en contracten te uploaden of terug te vinden."
-            : "Choose a prospect to upload or find quotes and contracts."}
+            ? "Al je offertes en contracten overzichtelijk bij elkaar, gesorteerd op bedrijf."
+            : "All your quotes and contracts in one place, sorted by company."}
         </p>
       </div>
       {isPending ? (
@@ -32,7 +33,10 @@ function DocumentsPage() {
           </Button>
         </div>
       ) : (
-        <DocumentsHero leads={leads} />
+        <>
+          <DocumentsHero leads={leads} />
+          <DocumentLibrary leads={leads} nl={nl} />
+        </>
       )}
     </div>
   );
