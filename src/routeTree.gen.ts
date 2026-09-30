@@ -17,8 +17,10 @@ import { Route as PendingRouteImport } from './routes/pending'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AuthenticatedConnectRouteImport } from './routes/_authenticated/connect'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedDocumentsRouteImport } from './routes/_authenticated/documents'
 import { Route as AuthenticatedImportRouteImport } from './routes/_authenticated/import'
 import { Route as AuthenticatedLeadsRouteImport } from './routes/_authenticated/leads'
+import { Route as AuthenticatedProspectflowRouteImport } from './routes/_authenticated/prospectflow'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
 import { Route as OauthConsentRouteImport } from './routes/oauth.consent'
@@ -64,6 +66,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedDocumentsRoute = AuthenticatedDocumentsRouteImport.update({
+  id: '/documents',
+  path: '/documents',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedImportRoute = AuthenticatedImportRouteImport.update({
   id: '/import',
   path: '/import',
@@ -74,6 +81,12 @@ const AuthenticatedLeadsRoute = AuthenticatedLeadsRouteImport.update({
   path: '/leads',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedProspectflowRoute =
+  AuthenticatedProspectflowRouteImport.update({
+    id: '/prospectflow',
+    path: '/prospectflow',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -103,8 +116,10 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/connect': typeof AuthenticatedConnectRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/documents': typeof AuthenticatedDocumentsRoute
   '/import': typeof AuthenticatedImportRoute
   '/leads': typeof AuthenticatedLeadsRoute
+  '/prospectflow': typeof AuthenticatedProspectflowRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/team': typeof AuthenticatedTeamRoute
   '/oauth/consent': typeof OauthConsentRoute
@@ -118,8 +133,10 @@ export interface FileRoutesByTo {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/connect': typeof AuthenticatedConnectRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/documents': typeof AuthenticatedDocumentsRoute
   '/import': typeof AuthenticatedImportRoute
   '/leads': typeof AuthenticatedLeadsRoute
+  '/prospectflow': typeof AuthenticatedProspectflowRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/team': typeof AuthenticatedTeamRoute
   '/oauth/consent': typeof OauthConsentRoute
@@ -135,8 +152,10 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/connect': typeof AuthenticatedConnectRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/documents': typeof AuthenticatedDocumentsRoute
   '/_authenticated/import': typeof AuthenticatedImportRoute
   '/_authenticated/leads': typeof AuthenticatedLeadsRoute
+  '/_authenticated/prospectflow': typeof AuthenticatedProspectflowRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/team': typeof AuthenticatedTeamRoute
   '/oauth/consent': typeof OauthConsentRoute
@@ -152,8 +171,10 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/connect'
     | '/dashboard'
+    | '/documents'
     | '/import'
     | '/leads'
+    | '/prospectflow'
     | '/settings'
     | '/team'
     | '/oauth/consent'
@@ -167,8 +188,10 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/connect'
     | '/dashboard'
+    | '/documents'
     | '/import'
     | '/leads'
+    | '/prospectflow'
     | '/settings'
     | '/team'
     | '/oauth/consent'
@@ -183,8 +206,10 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/connect'
     | '/_authenticated/dashboard'
+    | '/_authenticated/documents'
     | '/_authenticated/import'
     | '/_authenticated/leads'
+    | '/_authenticated/prospectflow'
     | '/_authenticated/settings'
     | '/_authenticated/team'
     | '/oauth/consent'
@@ -260,6 +285,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/documents': {
+      id: '/_authenticated/documents'
+      path: '/documents'
+      fullPath: '/documents'
+      preLoaderRoute: typeof AuthenticatedDocumentsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/import': {
       id: '/_authenticated/import'
       path: '/import'
@@ -272,6 +304,13 @@ declare module '@tanstack/react-router' {
       path: '/leads'
       fullPath: '/leads'
       preLoaderRoute: typeof AuthenticatedLeadsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/prospectflow': {
+      id: '/_authenticated/prospectflow'
+      path: '/prospectflow'
+      fullPath: '/prospectflow'
+      preLoaderRoute: typeof AuthenticatedProspectflowRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/settings': {
@@ -308,8 +347,10 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedConnectRoute: typeof AuthenticatedConnectRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedDocumentsRoute: typeof AuthenticatedDocumentsRoute
   AuthenticatedImportRoute: typeof AuthenticatedImportRoute
   AuthenticatedLeadsRoute: typeof AuthenticatedLeadsRoute
+  AuthenticatedProspectflowRoute: typeof AuthenticatedProspectflowRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedTeamRoute: typeof AuthenticatedTeamRoute
 }
@@ -317,8 +358,10 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedConnectRoute: AuthenticatedConnectRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedDocumentsRoute: AuthenticatedDocumentsRoute,
   AuthenticatedImportRoute: AuthenticatedImportRoute,
   AuthenticatedLeadsRoute: AuthenticatedLeadsRoute,
+  AuthenticatedProspectflowRoute: AuthenticatedProspectflowRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedTeamRoute: AuthenticatedTeamRoute,
 }

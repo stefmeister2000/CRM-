@@ -1,3 +1,7 @@
+import { usePipelineLeads } from "@/hooks/use-pipeline-leads";
+import { LeadTextField } from "@/components/LeadTextField";
+import { LeadDocuments } from "@/components/LeadDocuments";
+import { DealValueEditor } from "@/components/DealValueEditor";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -55,6 +59,8 @@ import {
 } from "@/lib/sales";
 
 export const Route = createFileRoute("/_authenticated/leads")({
+  validateSearch: (search: Record<string, unknown>): { lead?: string } =>
+    typeof search["lead"] === "string" ? { lead: search["lead"] } : {},
   head: () => ({
     meta: [
       { title: "Leads & outreach log | Sales CRM" },
@@ -109,21 +115,19 @@ function LeadsPage() {
     if (typeof window !== "undefined") window.localStorage.setItem("leads-owner-filter", value);
   };
 
-  const [openLeadId, setOpenLeadId] = useState<string | null>(null);
+  const { lead: openLeadId } = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const setOpenLeadId = (id: string | null) =>
+    void navigate({ search: id ? { lead: id } : {}, replace: true });
   const [addOpen, setAddOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_LEAD);
 
-  const { data: leads = [] } = useQuery({
-    queryKey: ["leads"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("leads")
-        .select("*")
-        .order("updated_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-  });
+  const {
+    data: leads = [],
+    isPending: leadsLoading,
+    isError: leadsError,
+    refetch: reloadLeads,
+  } = usePipelineLeads();
 
   const { data: profiles = [] } = useQuery({
     queryKey: ["profiles"],
@@ -170,8 +174,14 @@ function LeadsPage() {
   });
 
   const updateLead = useMutation({
+    scope: { id: "lead-detail-updates" },
     mutationFn: async ({ id, patch }: { id: string; patch: LeadUpdate }) => {
-      const { error } = await supabase.from("leads").update(patch).eq("id", id);
+      const { error } = await supabase
+        .from("leads")
+        .update(patch)
+        .eq("id", id)
+        .select("id")
+        .single();
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["leads"] }),
@@ -477,7 +487,16 @@ function LeadsPage() {
                 <TableCell>
                   <div className="flex items-center gap-2 font-medium">
                     {lead.priority >= 4 && <Star className="size-3.5 text-primary" />}
-                    {lead.company}
+                    <button
+                      type="button"
+                      className="text-left hover:underline"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setOpenLeadId(lead.id);
+                      }}
+                    >
+                      {lead.company}
+                    </button>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {lead.city ?? "—"} · {priorityLabel(lead.priority)}
@@ -501,7 +520,21 @@ function LeadsPage() {
                 <TableCell className="text-sm">{nameFor(lead.owner_id)}</TableCell>
               </TableRow>
             ))}
-            {filtered.length === 0 && (
+            {leadsLoading && (
+              <TableRow>
+                <TableCell colSpan={5} role="status">
+                  Loading leads…
+                </TableCell>
+              </TableRow>
+            )}
+            {leadsError && (
+              <TableRow>
+                <TableCell colSpan={5} role="alert">
+                  Could not load leads. <Button onClick={() => reloadLeads()}>Retry</Button>
+                </TableCell>
+              </TableRow>
+            )}
+            {!leadsLoading && !leadsError && filtered.length === 0 && (
               <TableRow>
                 <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
                   No leads match these filters.
@@ -520,12 +553,13 @@ function LeadsPage() {
                 <SheetTitle className="text-2xl">{openLead.company}</SheetTitle>
               </SheetHeader>
               <LeadDetail
+                key={openLead.id}
                 lead={openLead}
                 ownerName={nameFor(openLead.owner_id)}
                 profiles={profiles}
                 canManage={Boolean(me)}
 
-                onPatch={(patch) => updateLead.mutate({ id: openLead.id, patch })}
+                onPatch={(patch) => updateLead.mutateAsync({ id: openLead.id, patch })}
               />
             </>
           )}
@@ -573,6 +607,7 @@ function FilterSelect({
 }
 
 interface LeadRow {
+  value_estimate: number | null;
   id: string;
   company: string;
   contact_name: string | null;
@@ -604,7 +639,7 @@ function LeadDetail({
   ownerName: string;
   profiles: { id: string; full_name: string | null; email: string | null }[];
   canManage: boolean;
-  onPatch: (patch: LeadUpdate) => void;
+  onPatch: (patch: LeadUpdate) => Promise<unknown>;
 }) {
   const queryClient = useQueryClient();
   const { data: me } = useCurrentUser();
@@ -636,10 +671,12 @@ function LeadDetail({
         body: notes || null,
       });
       if (error) throw error;
-      await supabase
+      const { error: touchError } = await supabase
         .from("leads")
         .update({ last_touch_at: new Date().toISOString() })
         .eq("id", lead.id);
+      if (touchError)
+        throw new Error("Activity saved, but the last-contact date could not be updated.");
     },
     onSuccess: () => {
       setNotes("");
@@ -681,51 +718,59 @@ function LeadDetail({
     <div className="space-y-6 pt-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Company">
-          <Input
+          <LeadTextField
+            label="Company"
+            required
             value={lead.company}
-            onChange={(e) => onPatch({ company: e.target.value })}
+            onSave={(value) => onPatch({ company: value })}
             disabled={!canManage}
           />
         </Field>
         <Field label="Contact name">
-          <Input
+          <LeadTextField
+            label="Contact name"
             value={lead.contact_name ?? ""}
-            onChange={(e) => onPatch({ contact_name: e.target.value || null })}
+            onSave={(value) => onPatch({ contact_name: value || null })}
             disabled={!canManage}
           />
         </Field>
         <Field label="Job title">
-          <Input
+          <LeadTextField
+            label="Job title"
             value={lead.job_title ?? ""}
-            onChange={(e) => onPatch({ job_title: e.target.value || null })}
+            onSave={(value) => onPatch({ job_title: value || null })}
             disabled={!canManage}
           />
         </Field>
         <Field label="Email">
-          <Input
+          <LeadTextField
+            label="Email"
             value={lead.email ?? ""}
-            onChange={(e) => onPatch({ email: e.target.value || null })}
+            onSave={(value) => onPatch({ email: value || null })}
             disabled={!canManage}
           />
         </Field>
         <Field label="Phone">
-          <Input
+          <LeadTextField
+            label="Phone"
             value={lead.phone ?? ""}
-            onChange={(e) => onPatch({ phone: e.target.value || null })}
+            onSave={(value) => onPatch({ phone: value || null })}
             disabled={!canManage}
           />
         </Field>
         <Field label="City">
-          <Input
+          <LeadTextField
+            label="City"
             value={lead.city ?? ""}
-            onChange={(e) => onPatch({ city: e.target.value || null })}
+            onSave={(value) => onPatch({ city: value || null })}
             disabled={!canManage}
           />
         </Field>
         <Field label="Campaign">
-          <Input
+          <LeadTextField
+            label="Campaign"
             value={lead.campaign ?? ""}
-            onChange={(e) => onPatch({ campaign: e.target.value || null })}
+            onSave={(value) => onPatch({ campaign: value || null })}
             disabled={!canManage}
           />
         </Field>
@@ -745,10 +790,19 @@ function LeadDetail({
           Open LinkedIn profile
         </a>
       )}
+      <DealValueEditor
+        id={lead.id}
+        company={lead.company}
+        value={lead.value_estimate}
+        disabled={!canManage}
+      />
+      <LeadDocuments id={lead.id} />
       <Field label="Notes">
-        <Textarea
+        <LeadTextField
+          label="Notes"
+          multiline
           value={lead.notes ?? ""}
-          onChange={(e) => onPatch({ notes: e.target.value || null })}
+          onSave={(value) => onPatch({ notes: value || null })}
           disabled={!canManage}
           placeholder="General notes about this account..."
         />
@@ -759,7 +813,7 @@ function LeadDetail({
         <PipelineTracker
           stage={lead.stage}
           canEdit={canManage}
-          onStageChange={(value) => onPatch({ stage: value })}
+          onStageChange={(value) => void onPatch({ stage: value }).catch(() => undefined)}
         />
         {!canManage && (
           <p className="text-xs text-muted-foreground">Sign in again to move this lead.</p>
@@ -805,7 +859,9 @@ function LeadDetail({
           <Field label="Importance">
             <Select
               value={String(lead.priority)}
-              onValueChange={(value) => onPatch({ priority: Number(value) })}
+              onValueChange={(value) =>
+                void onPatch({ priority: Number(value) }).catch(() => undefined)
+              }
             >
               <SelectTrigger>
                 <SelectValue />
@@ -822,7 +878,9 @@ function LeadDetail({
           <Field label="Owner">
             <Select
               value={lead.owner_id ?? "none"}
-              onValueChange={(value) => onPatch({ owner_id: value === "none" ? null : value })}
+              onValueChange={(value) =>
+                void onPatch({ owner_id: value === "none" ? null : value }).catch(() => undefined)
+              }
             >
               <SelectTrigger>
                 <SelectValue />

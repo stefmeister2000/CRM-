@@ -6,4 +6,12 @@ import logOutreachTool from "./tools/log-outreach";
 import pipelineSummaryTool from "./tools/pipeline-summary";
 import captureEmailTool from "./tools/capture-email";
 
-export const crmTools = [searchLeadsTool, createLeadTool, createLeadsTool, updateLeadTool, logOutreachTool, pipelineSummaryTool, captureEmailTool];
+export const crmTools = [
+  searchLeadsTool,
+  createLeadTool,
+  createLeadsTool,
+  updateLeadTool,
+  logOutreachTool,
+  pipelineSummaryTool,
+  captureEmailTool,
+];

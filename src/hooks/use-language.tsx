@@ -373,6 +373,10 @@ function translate(value: string, language: Language) {
 type LanguageContextValue = { language: Language; setLanguage: (language: Language) => void };
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 const ORIGINAL_TEXT = new WeakMap<Node, string>();
+const ATTRIBUTE_TEXT = new WeakMap<
+  Element,
+  Map<string, { original: string; translated: string }>
+>();
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>("nl");
@@ -404,10 +408,13 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       for (const attribute of ["placeholder", "title", "aria-label"]) {
         const current = root.getAttribute(attribute);
         if (!current) continue;
-        const key = `data-i18n-${attribute}`;
-        if (!root.hasAttribute(key)) root.setAttribute(key, current);
-        const original = root.getAttribute(key) ?? current;
-        root.setAttribute(attribute, translate(original, language));
+        const attributes = ATTRIBUTE_TEXT.get(root) ?? new Map();
+        const previous = attributes.get(attribute);
+        const original = previous && current === previous.translated ? previous.original : current;
+        const translated = translate(original, language);
+        attributes.set(attribute, { original, translated });
+        ATTRIBUTE_TEXT.set(root, attributes);
+        if (current !== translated) root.setAttribute(attribute, translated);
       }
       root.childNodes.forEach(translateTree);
     };

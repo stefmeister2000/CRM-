@@ -1,3 +1,5 @@
+import { usePipelineLeads } from "@/hooks/use-pipeline-leads";
+import { useLanguage } from "@/hooks/use-language";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -57,6 +59,8 @@ export const Route = createFileRoute("/_authenticated/settings")({
 });
 
 function SettingsPage() {
+  const { language, setLanguage } = useLanguage();
+  const nl = language === "nl";
   const queryClient = useQueryClient();
   const { data: me } = useCurrentUser();
   const isAdmin = me?.roles.includes("admin") ?? false;
@@ -93,14 +97,7 @@ function SettingsPage() {
     },
   });
 
-  const { data: leads = [] } = useQuery({
-    queryKey: ["leads"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("leads").select("*");
-      if (error) throw error;
-      return data;
-    },
-  });
+  const { data: leads = [] } = usePipelineLeads();
 
   const { data: activities = [] } = useQuery({
     queryKey: ["activities-all"],
@@ -254,7 +251,34 @@ function SettingsPage() {
         </p>
       </div>
 
-      <Tabs defaultValue={isAdmin ? "team" : "ai"} className="space-y-6">
+      <section
+        aria-label={nl ? "Taalvoorkeur" : "Language preference"}
+        className="flex flex-wrap items-center justify-between gap-4 rounded-xl border bg-card p-5"
+      >
+        <div>
+          <h2 className="text-base font-semibold">{nl ? "Taal" : "Language"}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {nl
+              ? "Kies de taal van je CRM. Je voorkeur wordt op dit apparaat bewaard."
+              : "Choose your CRM language. Your preference is saved on this device."}
+          </p>
+        </div>
+        <select
+          aria-label={nl ? "Taal kiezen" : "Choose language"}
+          value={language}
+          onChange={(event) => setLanguage(event.target.value as "nl" | "en")}
+          className="h-10 min-w-40 rounded-lg border bg-background px-3 text-sm"
+        >
+          <option value="nl">Nederlands</option>
+          <option value="en">English</option>
+        </select>
+      </section>
+
+      <Tabs
+        key={isAdmin ? "admin" : "member"}
+        defaultValue={isAdmin ? "team" : "ai"}
+        className="space-y-6"
+      >
         <TabsList>
           {isAdmin && <TabsTrigger value="team">Team & ownership</TabsTrigger>}
           <TabsTrigger value="ai">ChatGPT koppelen</TabsTrigger>

@@ -9,6 +9,10 @@ The previous database has been disconnected. The replacement project is pending 
 
 For the new project, run `supabase/bootstrap/fresh-crm.sql` once in its SQL editor. After the owner signs up, use `supabase/bootstrap/first-admin.sql` with the verified owner UUID. Configure Auth site/redirect URLs for the CRM. Google login requires your own Google provider configuration. Keep the service role key on the server only.
 
-The MCP endpoint is `/mcp`, powered by the standard MCP SDK. Set `CRM_PUBLIC_URL` to the deployed HTTPS origin and enable the Supabase OAuth server with `/oauth/consent` as its authorization path before connecting an AI client. Website intake and AI activation remain pending.
+The MCP endpoint is `/mcp`, powered by the standard MCP SDK. Set `CRM_PUBLIC_URL` to the deployed HTTPS origin and enable the Supabase OAuth server with `/oauth/consent` as its authorization path before connecting an AI client. Website intake is available at `/api/public/inbound-lead` using a server-only intake token configured under Settings. The local Stefmeister website is connected; production intake requires a public HTTPS CRM deployment. AI activation remains pending.
 
 Validation: `npx tsc --noEmit`, `npm run test:integrations`, `npm run build`.
+
+## Contract and quote attachments
+
+Apply `supabase/migrations/20260930160000_lead_documents.sql` once to enable the private `lead-documents` bucket. Approved CRM users can upload PDF, Word, PNG, and JPEG files (up to 20 MB) to existing leads. Attachments are visible only to the uploading user and open through 60-second signed links. Server administrators retain administrative storage access. The dedicated Offertes & contracten page and lead details expose this section.

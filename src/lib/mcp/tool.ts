@@ -15,6 +15,7 @@ export function defineTool<S extends z.ZodRawShape>(tool: {
 }) {
   return {
     ...tool,
-    execute: (input: unknown, ctx: ToolContext) => tool.handler(z.object(tool.inputSchema).parse(input), ctx),
+    execute: (input: unknown, ctx: ToolContext) =>
+      tool.handler(z.object(tool.inputSchema).parse(input), ctx),
   };
 }

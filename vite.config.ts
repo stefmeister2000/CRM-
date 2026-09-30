@@ -10,10 +10,14 @@ export default defineConfig(({ mode, command }) => {
     if (key.startsWith("SUPABASE_") || key === "CRM_PUBLIC_URL") process.env[key] ??= value;
   }
   return {
-    plugins: [tsconfigPaths(), tailwindcss(), tanstackStart({ server: { entry: "server" } }),
-      ...(command === "build" ? [nitro({ preset: "node-server", noExternals: true })] : []), react()],
+    plugins: [
+      tsconfigPaths(),
+      tailwindcss(),
+      tanstackStart({ server: { entry: "server" } }),
+      ...(command === "build" ? [nitro({ preset: "node-server", noExternals: true })] : []),
+      react(),
+    ],
     server: { host: "127.0.0.1", port: 5173, strictPort: true },
     resolve: { dedupe: ["react", "react-dom", "@tanstack/react-router"] },
   };
 });
-

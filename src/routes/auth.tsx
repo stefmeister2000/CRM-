@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
 import { supabase, isDatabaseConfigured } from "@/integrations/supabase/client";
@@ -29,14 +29,20 @@ export const Route = createFileRoute("/auth")({
   }),
   validateSearch: (search: Record<string, unknown>): { next?: string } =>
     typeof search["next"] === "string" ? { next: search["next"] } : {},
-  component: () => isDatabaseConfigured ? <AuthPage /> : (
-    <main className="flex min-h-screen items-center justify-center bg-secondary p-8">
-      <div className="max-w-lg rounded-2xl border bg-card p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold">Je nieuwe CRM wordt klaargezet</h1>
-        <p className="mt-4 text-muted-foreground">De oude database is losgekoppeld. Zodra je nieuwe database klaar is, kun je hier een nieuw account maken en met een lege CRM starten.</p>
-      </div>
-    </main>
-  ),
+  component: () =>
+    isDatabaseConfigured ? (
+      <AuthPage />
+    ) : (
+      <main className="flex min-h-screen items-center justify-center bg-secondary p-8">
+        <div className="max-w-lg rounded-2xl border bg-card p-8 shadow-sm">
+          <h1 className="text-2xl font-semibold">Je nieuwe CRM wordt klaargezet</h1>
+          <p className="mt-4 text-muted-foreground">
+            De oude database is losgekoppeld. Zodra je nieuwe database klaar is, kun je hier een
+            nieuw account maken en met een lege CRM starten.
+          </p>
+        </div>
+      </main>
+    ),
 });
 
 function safeNext(next: string | undefined) {
@@ -75,6 +81,19 @@ function AuthPage() {
   const { next } = Route.useSearch();
   const redirectTo = safeNext(next);
   const queryClient = useQueryClient();
+  const { data: googleEnabled = false } = useQuery({
+    queryKey: ["auth", "google-enabled"],
+    staleTime: 5 * 60 * 1000,
+    queryFn: async ({ signal }) => {
+      const response = await fetch(`${import.meta.env["VITE_SUPABASE_URL"]}/auth/v1/settings`, {
+        signal,
+        headers: { apikey: import.meta.env["VITE_SUPABASE_PUBLISHABLE_KEY"] },
+      });
+      if (!response.ok) throw new Error("Could not load sign-in providers");
+      const settings = (await response.json()) as { external?: { google?: boolean } };
+      return settings.external?.google === true;
+    },
+  });
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -174,7 +193,8 @@ function AuthPage() {
   const google = async () => {
     const callbackUrl = new URL("/auth", window.location.origin);
     if (redirectTo) callbackUrl.searchParams.set("next", redirectTo);
-    const result = await supabase.auth.signInWithOAuth({ provider: "google",
+    const result = await supabase.auth.signInWithOAuth({
+      provider: "google",
       options: { redirectTo: callbackUrl.toString() },
     });
     if (result.error) {
@@ -324,20 +344,24 @@ function AuthPage() {
               </Button>
             </form>
 
-            <div className="my-7 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              <span className="h-px flex-1 bg-border" /> or{" "}
-              <span className="h-px flex-1 bg-border" />
-            </div>
+            {googleEnabled && (
+              <>
+                <div className="my-7 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                  <span className="h-px flex-1 bg-border" /> or{" "}
+                  <span className="h-px flex-1 bg-border" />
+                </div>
 
-            <Button
-              type="button"
-              variant="outline"
-              className="h-12 w-full rounded-xl"
-              onClick={google}
-            >
-              <GoogleMark />
-              Continue with Google
-            </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-12 w-full rounded-xl"
+                  onClick={google}
+                >
+                  <GoogleMark />
+                  Continue with Google
+                </Button>
+              </>
+            )}
           </div>
 
           <div className="text-center">
