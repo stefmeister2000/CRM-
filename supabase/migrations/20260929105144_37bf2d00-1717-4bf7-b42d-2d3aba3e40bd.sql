@@ -1,0 +1,1 @@
+ALTER TYPE public.lead_venue ADD VALUE IF NOT EXISTS 'mall_nl';

@@ -12,4 +12,3 @@ For the new project, run `supabase/bootstrap/fresh-crm.sql` once in its SQL edit
 The MCP endpoint is `/mcp`, powered by the standard MCP SDK. Set `CRM_PUBLIC_URL` to the deployed HTTPS origin and enable the Supabase OAuth server with `/oauth/consent` as its authorization path before connecting an AI client. Website intake and AI activation remain pending.
 
 Validation: `npx tsc --noEmit`, `npm run test:integrations`, `npm run build`.
-
