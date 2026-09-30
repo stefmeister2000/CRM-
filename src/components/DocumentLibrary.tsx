@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { Building2, ExternalLink, FileText, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { LeadDocumentsButton } from "@/components/LeadDocuments";
 import { DOCUMENT_BUCKET, listLeadDocuments } from "@/lib/lead-documents";
@@ -12,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 type Company = { id: string; company: string };
 export function DocumentLibrary({ leads, nl }: { leads: Company[]; nl: boolean }) {
   const [search, setSearch] = useState("");
-  const [kind, setKind] = useState("all");
+  const [kind, setKind] = useState<"quote" | "contract">("quote");
   const [sort, setSort] = useState("asc");
   const [opening, setOpening] = useState<string | null>(null);
   const ids = leads.map((lead) => lead.id).sort();
@@ -53,7 +54,7 @@ export function DocumentLibrary({ leads, nl }: { leads: Company[]; nl: boolean }
       ...group,
       documents: group.documents.filter(
         (doc) =>
-          (kind === "all" || doc.category === kind) &&
+          doc.category === kind &&
           (!term ||
             group.company.toLocaleLowerCase().includes(term) ||
             title(doc.name).toLocaleLowerCase().includes(term)),
@@ -112,129 +113,148 @@ export function DocumentLibrary({ leads, nl }: { leads: Company[]; nl: boolean }
           </div>
         ))}
       </div>
-      <div className="flex flex-wrap items-center gap-3">
-        <label className="relative min-w-48 flex-1">
-          <Search className="absolute left-3 top-3 size-4 text-muted-foreground" />
-          <Input
-            className="pl-9"
-            aria-label={nl ? "Zoek bedrijf of document" : "Search company or document"}
-            placeholder={nl ? "Zoek bedrijf of document…" : "Search company or document…"}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </label>
-        <select
-          className="h-10 rounded-md border bg-card px-3 text-sm"
-          aria-label={nl ? "Filter documenttype" : "Filter document type"}
-          value={kind}
-          onChange={(e) => setKind(e.target.value)}
+      <Tabs value={kind} onValueChange={(value) => setKind(value as "quote" | "contract")}>
+        <TabsList
+          className="mb-5 grid h-12 w-full grid-cols-2 sm:max-w-lg"
+          aria-label={nl ? "Documenttype" : "Document type"}
         >
-          <option value="all">{nl ? "Alle documenten" : "All documents"}</option>
-          <option value="quote">{nl ? "Offertes" : "Quotes"}</option>
-          <option value="contract">{nl ? "Contracten" : "Contracts"}</option>
-        </select>
-        <select
-          className="h-10 rounded-md border bg-card px-3 text-sm"
-          aria-label={nl ? "Sorteren op bedrijf" : "Sort by company"}
-          value={sort}
-          onChange={(e) => setSort(e.target.value)}
-        >
-          <option value="asc">{nl ? "Bedrijf A–Z" : "Company A–Z"}</option>
-          <option value="desc">{nl ? "Bedrijf Z–A" : "Company Z–A"}</option>
-        </select>
-        <Button variant="outline" disabled={isFetching} onClick={() => refetch()}>
-          {nl ? "Vernieuwen" : "Refresh"}
-        </Button>
-      </div>
-      <p className="text-xs text-muted-foreground">
-        {nl
-          ? "Alle documenten waartoe je toegang hebt, per bedrijf. Binnen elk bedrijf staan de nieuwste bestanden bovenaan."
-          : "All documents you can access, grouped by company. Newest files appear first within each company."}
-      </p>
-      {isPending ? (
-        <p role="status">{nl ? "Documenten laden…" : "Loading documents…"}</p>
-      ) : isError ? (
-        <div role="alert" className="rounded-xl border p-6">
-          {nl
-            ? "Het documentenoverzicht kon niet volledig worden geladen."
-            : "Could not load the complete document library."}
-          <Button variant="link" onClick={() => refetch()}>
-            {nl ? "Opnieuw proberen" : "Retry"}
-          </Button>
-        </div>
-      ) : groups.length === 0 ? (
-        <div className="rounded-2xl border border-dashed bg-card p-10 text-center">
-          <FileText className="mx-auto mb-3 size-8 text-muted-foreground" />
-          <h2 className="text-lg font-semibold">
-            {allDocuments.length
-              ? nl
-                ? "Geen documenten gevonden"
-                : "No matching documents"
-              : nl
-                ? "Nog geen offertes of contracten"
-                : "No quotes or contracts yet"}
-          </h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {allDocuments.length
-              ? nl
-                ? "Pas je zoekterm of documenttype aan."
-                : "Change your search or document type."
-              : nl
-                ? "Upload hierboven een document bij een bedrijf. Het verschijnt hier automatisch."
-                : "Upload a document for a company above. It will appear here automatically."}
+          <TabsTrigger value="quote" className="h-10 gap-2">
+            {nl ? "Offertes" : "Quotes"}
+            <span className="rounded-full bg-primary/10 px-2 text-xs">
+              {isPending || isError
+                ? "—"
+                : allDocuments.filter((d) => d.category === "quote").length}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="contract" className="h-10 gap-2">
+            {nl ? "Contracten" : "Contracts"}
+            <span className="rounded-full bg-primary/10 px-2 text-xs">
+              {isPending || isError
+                ? "—"
+                : allDocuments.filter((d) => d.category === "contract").length}
+            </span>
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value={kind} className="space-y-5">
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="relative min-w-48 flex-1">
+              <Search className="absolute left-3 top-3 size-4 text-muted-foreground" />
+              <Input
+                className="pl-9"
+                aria-label={nl ? "Zoek bedrijf of document" : "Search company or document"}
+                placeholder={nl ? "Zoek bedrijf of document…" : "Search company or document…"}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </label>
+            <select
+              className="h-10 rounded-md border bg-card px-3 text-sm"
+              aria-label={nl ? "Sorteren op bedrijf" : "Sort by company"}
+              value={sort}
+              onChange={(e) => setSort(e.target.value)}
+            >
+              <option value="asc">{nl ? "Bedrijf A–Z" : "Company A–Z"}</option>
+              <option value="desc">{nl ? "Bedrijf Z–A" : "Company Z–A"}</option>
+            </select>
+            <Button variant="outline" disabled={isFetching} onClick={() => refetch()}>
+              {nl ? "Vernieuwen" : "Refresh"}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {nl
+              ? "Alle documenten waartoe je toegang hebt, per bedrijf. Binnen elk bedrijf staan de nieuwste bestanden bovenaan."
+              : "All documents you can access, grouped by company. Newest files appear first within each company."}
           </p>
-        </div>
-      ) : (
-        groups.map((group) => (
-          <article key={group.id} className="overflow-hidden rounded-2xl border bg-card">
-            <header className="flex flex-wrap items-center justify-between gap-3 border-b bg-secondary/40 px-5 py-4">
-              <div className="flex min-w-0 items-center gap-3">
-                <Building2 className="size-5 shrink-0 text-primary" />
-                <div>
-                  <h2 className="break-words text-lg font-semibold">
-                    <Link to="/leads" search={{ lead: group.id }} className="hover:underline">
-                      {group.company}
-                    </Link>
-                  </h2>
-                  <p className="text-xs text-muted-foreground">
-                    {group.documents.length} {nl ? "documenten" : "documents"}
-                  </p>
-                </div>
-              </div>
-              <div>
-                <LeadDocumentsButton id={group.id} company={group.company} />
-              </div>
-            </header>
-            <ul className="divide-y">
-              {group.documents.map((doc) => (
-                <li key={doc.id} className="flex items-center gap-3 px-5 py-4">
-                  <FileText className="size-5 shrink-0 text-primary" />
-                  <div className="min-w-0 flex-1">
-                    <p className="break-words text-sm font-medium">{title(doc.name)}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {doc.category === "quote" ? (nl ? "Offerte" : "Quote") : "Contract"} ·{" "}
-                      {doc.created_at
-                        ? new Date(doc.created_at).toLocaleDateString(nl ? "nl-BE" : "en-GB")
-                        : "—"}{" "}
-                      · {Math.max(1, Math.round(Number(doc.metadata?.size ?? 0) / 1024))} KB
-                    </p>
+          {isPending ? (
+            <p role="status">{nl ? "Documenten laden…" : "Loading documents…"}</p>
+          ) : isError ? (
+            <div role="alert" className="rounded-xl border p-6">
+              {nl
+                ? "Het documentenoverzicht kon niet volledig worden geladen."
+                : "Could not load the complete document library."}
+              <Button variant="link" onClick={() => refetch()}>
+                {nl ? "Opnieuw proberen" : "Retry"}
+              </Button>
+            </div>
+          ) : groups.length === 0 ? (
+            <div className="rounded-2xl border border-dashed bg-card p-10 text-center">
+              <FileText className="mx-auto mb-3 size-8 text-muted-foreground" />
+              <h2 className="text-lg font-semibold">
+                {allDocuments.some((d) => d.category === kind)
+                  ? nl
+                    ? "Geen documenten gevonden"
+                    : "No matching documents"
+                  : nl
+                    ? kind === "quote"
+                      ? "Nog geen offertes"
+                      : "Nog geen contracten"
+                    : kind === "quote"
+                      ? "No quotes yet"
+                      : "No contracts yet"}
+              </h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {allDocuments.some((d) => d.category === kind)
+                  ? nl
+                    ? "Pas je zoekterm aan."
+                    : "Change your search."
+                  : nl
+                    ? "Upload hierboven een document bij een bedrijf. Het verschijnt hier automatisch."
+                    : "Upload a document for a company above. It will appear here automatically."}
+              </p>
+            </div>
+          ) : (
+            groups.map((group) => (
+              <article key={group.id} className="overflow-hidden rounded-2xl border bg-card">
+                <header className="flex flex-wrap items-center justify-between gap-3 border-b bg-secondary/40 px-5 py-4">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Building2 className="size-5 shrink-0 text-primary" />
+                    <div>
+                      <h2 className="break-words text-lg font-semibold">
+                        <Link to="/leads" search={{ lead: group.id }} className="hover:underline">
+                          {group.company}
+                        </Link>
+                      </h2>
+                      <p className="text-xs text-muted-foreground">
+                        {group.documents.length} {nl ? "documenten" : "documents"}
+                      </p>
+                    </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={opening !== null}
-                    aria-label={`Open ${title(doc.name)} — ${group.company}`}
-                    onClick={() => openDocument(doc.path)}
-                  >
-                    <ExternalLink className="size-4" />
-                    <span className="hidden sm:inline">Open</span>
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          </article>
-        ))
-      )}
+                  <div>
+                    <LeadDocumentsButton id={group.id} company={group.company} initialKind={kind} />
+                  </div>
+                </header>
+                <ul className="divide-y">
+                  {group.documents.map((doc) => (
+                    <li key={doc.id} className="flex items-center gap-3 px-5 py-4">
+                      <FileText className="size-5 shrink-0 text-primary" />
+                      <div className="min-w-0 flex-1">
+                        <p className="break-words text-sm font-medium">{title(doc.name)}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {doc.category === "quote" ? (nl ? "Offerte" : "Quote") : "Contract"} ·{" "}
+                          {doc.created_at
+                            ? new Date(doc.created_at).toLocaleDateString(nl ? "nl-BE" : "en-GB")
+                            : "—"}{" "}
+                          · {Math.max(1, Math.round(Number(doc.metadata?.size ?? 0) / 1024))} KB
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={opening !== null}
+                        aria-label={`Open ${title(doc.name)} — ${group.company}`}
+                        onClick={() => openDocument(doc.path)}
+                      >
+                        <ExternalLink className="size-4" />
+                        <span className="hidden sm:inline">Open</span>
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            ))
+          )}
+        </TabsContent>
+      </Tabs>
     </section>
   );
 }

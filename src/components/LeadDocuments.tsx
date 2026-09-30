@@ -25,7 +25,15 @@ const MIME: Record<string, string> = {
 };
 type Kind = "contract" | "quote";
 
-export function LeadDocumentsButton({ id, company }: { id: string; company: string }) {
+export function LeadDocumentsButton({
+  id,
+  company,
+  initialKind = "quote",
+}: {
+  id: string;
+  company: string;
+  initialKind?: Kind;
+}) {
   const [open, setOpen] = useState(false);
   const { language } = useLanguage();
   const nl = language === "nl";
@@ -47,19 +55,19 @@ export function LeadDocumentsButton({ id, company }: { id: string; company: stri
             <DialogTitle>{nl ? "Contracten & offertes" : "Contracts & quotes"}</DialogTitle>
             <DialogDescription>{company}</DialogDescription>
           </DialogHeader>
-          <LeadDocuments id={id} />
+          <LeadDocuments id={id} initialKind={initialKind} />
         </DialogContent>
       </Dialog>
     </>
   );
 }
 
-export function LeadDocuments({ id }: { id: string }) {
+export function LeadDocuments({ id, initialKind = "quote" }: { id: string; initialKind?: Kind }) {
   const { language } = useLanguage();
   const nl = language === "nl";
   const client = useQueryClient();
   const input = useRef<HTMLInputElement>(null);
-  const [kind, setKind] = useState<Kind>("quote");
+  const [kind, setKind] = useState<Kind>(initialKind);
   const [file, setFile] = useState<File | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
   const [message, setMessage] = useState("");
