@@ -74,7 +74,7 @@ function Dashboard() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="mb-2 text-xs font-semibold tracking-[.22em] text-primary">SALES OVERVIEW</p>
-          <h1 className="text-4xl">
+          <h1 className="break-words text-3xl sm:text-4xl">
             {nl ? "Van eerste contact tot deal." : "From first hello to closed deal."}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">

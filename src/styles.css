@@ -181,3 +181,26 @@
   background-clip: text;
   color: transparent;
 }
+
+/* Touch layouts: readable controls and room for the mobile navigation. */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+  button,
+  select,
+  [role="combobox"],
+  [role="tab"] {
+    min-height: 44px;
+  }
+  [role="dialog"] {
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  main {
+    overflow-wrap: anywhere;
+  }
+}

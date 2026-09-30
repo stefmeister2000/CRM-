@@ -243,7 +243,9 @@ function SettingsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-4xl">{isAdmin ? "Team & ownership" : "ChatGPT koppelen"}</h1>
+        <h1 className="break-words text-3xl sm:text-4xl">
+          {isAdmin ? "Team & ownership" : "ChatGPT koppelen"}
+        </h1>
         <p className="text-sm text-muted-foreground">
           {isAdmin
             ? "Split per role, so everybody sees who owns which accounts and where they stand in the pipeline."
@@ -279,7 +281,7 @@ function SettingsPage() {
         defaultValue={isAdmin ? "team" : "ai"}
         className="space-y-6"
       >
-        <TabsList>
+        <TabsList className="flex h-auto flex-wrap justify-start gap-1">
           {isAdmin && <TabsTrigger value="team">Team & ownership</TabsTrigger>}
           <TabsTrigger value="ai">ChatGPT koppelen</TabsTrigger>
           {isAdmin && <TabsTrigger value="website">Website requests</TabsTrigger>}

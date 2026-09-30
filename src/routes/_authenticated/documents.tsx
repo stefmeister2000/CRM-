@@ -16,7 +16,9 @@ function DocumentsPage() {
     <div className="space-y-8">
       <div>
         <p className="mb-2 text-xs font-semibold tracking-[.22em] text-primary">DOCUMENTS</p>
-        <h1 className="text-4xl">{nl ? "Offertes & contracten" : "Quotes & contracts"}</h1>
+        <h1 className="break-words text-3xl sm:text-4xl">
+          {nl ? "Offertes & contracten" : "Quotes & contracts"}
+        </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {nl
             ? "Al je offertes en contracten overzichtelijk bij elkaar, gesorteerd op bedrijf."

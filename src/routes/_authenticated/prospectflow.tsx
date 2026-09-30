@@ -84,7 +84,9 @@ function ProspectFlow() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-4xl">{nl ? "Prospectflow" : "Prospect flow"}</h1>
+        <h1 className="break-words text-3xl sm:text-4xl">
+          {nl ? "Prospectflow" : "Prospect flow"}
+        </h1>
         <div className="flex gap-2">
           <Button variant="outline" disabled={isFetching} onClick={() => refetch()}>
             {nl ? "Vernieuwen" : "Refresh"}
@@ -127,7 +129,7 @@ function ProspectFlow() {
             {move.isPending ? (nl ? "Fase opslaan…" : "Saving stage…") : ""}
           </p>
           <div
-            className="flex gap-3 overflow-x-auto pb-4"
+            className="flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-4"
             aria-label={nl ? "Pipelinefasen" : "Pipeline stages"}
           >
             {STAGES.map((stage, index) => {
@@ -149,7 +151,7 @@ function ProspectFlow() {
                     setDragging(null);
                     changeStage(id, stage.value);
                   }}
-                  className={`min-h-72 w-64 shrink-0 rounded-xl border p-3 transition-colors ${over === stage.value ? "border-primary bg-primary/10" : "border-transparent bg-secondary/50"}`}
+                  className={`min-h-72 w-[85vw] max-w-80 shrink-0 snap-start sm:w-64 rounded-xl border p-3 transition-colors ${over === stage.value ? "border-primary bg-primary/10" : "border-transparent bg-secondary/50"}`}
                 >
                   <div className="mb-4 border-t-2 pt-3" style={{ borderColor: colors[index] }}>
                     <div className="flex items-center justify-between">

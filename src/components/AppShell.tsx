@@ -60,7 +60,7 @@ function Shell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-background">
       <aside
         aria-label={nl ? "Zijbalk" : "Sidebar"}
-        className="fixed inset-y-0 left-0 z-30 flex w-16 flex-col border-r bg-card px-2 py-6 md:w-60 md:px-5"
+        className="fixed inset-y-0 left-0 z-30 hidden w-16 md:flex flex-col border-r bg-card px-2 py-6 md:w-60 md:px-5"
       >
         <Link to="/dashboard" aria-label="Sales CRM" className="flex items-center gap-3 px-1">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary font-semibold text-primary-foreground">
@@ -126,7 +126,56 @@ function Shell({ children }: { children: ReactNode }) {
           </Button>
         </div>
       </aside>
-      <main className="ml-16 min-w-0 px-4 py-8 md:ml-60 md:px-8 lg:px-10">
+      <header
+        className="flex items-center justify-between gap-3 border-b bg-card px-4 py-3 md:hidden"
+        style={{ paddingTop: "max(.75rem, env(safe-area-inset-top))" }}
+      >
+        <Link to="/dashboard" className="flex min-h-11 items-center gap-2 font-semibold">
+          <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            S
+          </span>
+          Sales CRM
+        </Link>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={signOut}
+          aria-label={nl ? "Afmelden" : "Sign out"}
+        >
+          <LogOut className="size-5" />
+        </Button>
+      </header>
+      <nav
+        aria-label={nl ? "Mobiele navigatie" : "Mobile navigation"}
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t bg-card md:hidden"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        {NAV.map((item) => (
+          <Link
+            key={item.to}
+            to={item.to}
+            aria-label={navLabel(item.label)}
+            className="relative flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 px-1 text-[10px] text-muted-foreground [&.active]:bg-primary/10 [&.active]:font-semibold [&.active]:text-primary"
+          >
+            <item.icon className="size-5" />
+            <span>
+              {item.to === "/documents"
+                ? nl
+                  ? "Documenten"
+                  : "Documents"
+                : item.to === "/prospectflow"
+                  ? "Pipeline"
+                  : navLabel(item.label)}
+            </span>
+            {item.to === "/settings" && pendingCount > 0 && (
+              <span className="absolute right-2 top-1 rounded-full bg-primary px-1 text-primary-foreground">
+                {pendingCount}
+              </span>
+            )}
+          </Link>
+        ))}
+      </nav>
+      <main className="min-w-0 px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-6 md:ml-60 md:px-8 md:py-8 lg:px-10">
         <div className="mx-auto max-w-[1500px]">{children}</div>
       </main>
     </div>

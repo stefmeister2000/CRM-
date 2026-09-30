@@ -254,7 +254,7 @@ function LeadsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-4xl">Leads</h1>
+          <h1 className="break-words text-3xl sm:text-4xl">Leads</h1>
           <p className="text-sm text-muted-foreground">
             {filtered.length} of {leads.length} leads · All accounts
           </p>
@@ -408,7 +408,7 @@ function LeadsPage() {
 
       <Card>
         <CardContent className="flex flex-wrap gap-3 pt-6">
-          <div className="relative min-w-56 flex-1">
+          <div className="relative min-w-0 basis-full sm:min-w-56 sm:flex-1">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               className="pl-9"
@@ -466,7 +466,40 @@ function LeadsPage() {
         </CardContent>
       </Card>
 
-      <div className="panel overflow-x-auto">
+      <div className="space-y-3 md:hidden">
+        {filtered.map((lead) => (
+          <article key={lead.id} className="rounded-xl border bg-card p-4">
+            <button
+              type="button"
+              onClick={() => setOpenLeadId(lead.id)}
+              className="min-h-11 w-full break-words text-left font-semibold text-primary"
+            >
+              {lead.company}
+            </button>
+            <p className="break-words text-sm">{lead.contact_name ?? "—"}</p>
+            <p className="break-all text-xs text-muted-foreground">{lead.email ?? ""}</p>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <Badge variant="outline">{labelFor(SOURCES, lead.source)}</Badge>
+              <StageChip
+                stage={lead.stage}
+                canEdit={canManageLead(lead)}
+                onStageChange={(stage) => updateLead.mutate({ id: lead.id, patch: { stage } })}
+              />
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">{nameFor(lead.owner_id)}</p>
+          </article>
+        ))}
+        {leadsLoading && <p role="status">Loading leads…</p>}
+        {leadsError && (
+          <p role="alert">
+            Could not load leads. <Button onClick={() => reloadLeads()}>Retry</Button>
+          </p>
+        )}
+        {!leadsLoading && !leadsError && !filtered.length && (
+          <p className="py-6 text-sm text-muted-foreground">No leads match these filters.</p>
+        )}
+      </div>
+      <div className="panel hidden overflow-x-auto md:block">
         <Table className="leads-table">
           <TableHeader>
             <TableRow>

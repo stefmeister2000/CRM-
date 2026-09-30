@@ -63,7 +63,7 @@ export function PipelineTracker({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-stretch gap-1.5">
+      <div className="grid grid-cols-2 items-stretch gap-1.5 sm:grid-cols-5">
         {PIPELINE_STEPS.map((step, index) => {
           const done = current != null && index + 1 < current;
           const active = current === index + 1;

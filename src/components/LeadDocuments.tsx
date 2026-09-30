@@ -300,12 +300,12 @@ export function DocumentsHero({ leads }: { leads: { id: string; company: string 
             </p>
           </div>
         </div>
-        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+        <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center">
           <select
             aria-label={nl ? "Prospect voor documenten" : "Prospect for documents"}
             value={selected}
             onChange={(e) => setSelected(e.target.value)}
-            className="h-10 min-w-0 flex-1 rounded-md border bg-card px-3 text-sm sm:w-64"
+            className="h-11 w-full min-w-0 rounded-md border bg-card px-3 text-sm sm:w-64 sm:flex-1"
           >
             <option value="">{nl ? "Kies een prospect…" : "Choose a prospect…"}</option>
             {[...leads]
