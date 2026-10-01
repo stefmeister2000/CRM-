@@ -6,7 +6,7 @@ import { DealValueEditor } from "@/components/DealValueEditor";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, Plus, Search, Star } from "lucide-react";
+import { Download, Plus, Search, Star, Flag, Trash2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -104,6 +104,8 @@ const EMPTY_LEAD = {
 function LeadsPage() {
   const queryClient = useQueryClient();
   const { data: me } = useCurrentUser();
+  const [listMode, setListMode] = useState("active");
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; company: string } | null>(null);
   const [search, setSearch] = useState("");
   const [sourceFilter, setSourceFilter] = useState("all");
   const [stageFilter, setStageFilter] = useState("all");
@@ -128,7 +130,7 @@ function LeadsPage() {
     isPending: leadsLoading,
     isError: leadsError,
     refetch: reloadLeads,
-  } = usePipelineLeads();
+  } = usePipelineLeads(true);
 
   const { data: profiles = [] } = useQuery({
     queryKey: ["profiles"],
@@ -192,6 +194,8 @@ function LeadsPage() {
   const filtered = useMemo(() => {
     const term = search.toLowerCase().trim();
     return leads.filter((lead) => {
+      if (listMode === "trash" ? !lead.deleted_at : Boolean(lead.deleted_at)) return false;
+      if (listMode === "flagged" && !lead.flagged) return false;
       if (sourceFilter !== "all" && lead.source !== sourceFilter) return false;
       if (stageFilter !== "all" && lead.stage !== stageFilter) return false;
       if (ownerFilter === "mine" && lead.owner_id !== me?.id) return false;
@@ -203,11 +207,71 @@ function LeadsPage() {
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(term));
     });
-  }, [leads, search, sourceFilter, stageFilter, ownerFilter, me?.id]);
+  }, [leads, listMode, search, sourceFilter, stageFilter, ownerFilter, me?.id]);
 
   // Every signed-in rep can update accounts: stage, value, notes and ownership.
   const canManageLead = (_lead: { owner_id: string | null; created_by: string | null }) =>
     Boolean(me);
+
+  const actionsFor = (lead: {
+    id: string;
+    company: string;
+    flagged: boolean;
+    deleted_at: string | null;
+  }) => (
+    <div className="flex flex-wrap gap-2" onClick={(event) => event.stopPropagation()}>
+      {lead.deleted_at ? (
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={!me || updateLead.isPending}
+          onClick={() =>
+            updateLead.mutate(
+              { id: lead.id, patch: { deleted_at: null } },
+              {
+                onSuccess: () => {
+                  setOpenLeadId(null);
+                  toast.success("Lead hersteld");
+                },
+              },
+            )
+          }
+        >
+          <Undo2 className="mr-2 size-4" />
+          Herstellen
+        </Button>
+      ) : (
+        <>
+          <Button
+            size="sm"
+            variant={lead.flagged ? "secondary" : "outline"}
+            aria-label={
+              lead.flagged ? `Vlag verwijderen: ${lead.company}` : `Markeren: ${lead.company}`
+            }
+            aria-pressed={lead.flagged}
+            disabled={!me || updateLead.isPending}
+            onClick={() => updateLead.mutate({ id: lead.id, patch: { flagged: !lead.flagged } })}
+          >
+            <Flag
+              className={`mr-2 size-4 ${lead.flagged ? "fill-amber-400 text-amber-600" : ""}`}
+            />
+            {lead.flagged ? "Gemarkeerd" : "Markeren"}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-destructive"
+            aria-label={`Verwijderen: ${lead.company}`}
+            disabled={!me || updateLead.isPending}
+            onClick={() => setDeleteTarget(lead)}
+          >
+            <Trash2 className="mr-2 size-4" />
+            Verwijderen
+          </Button>
+        </>
+      )}
+    </div>
+  );
 
   const exportCsv = () => {
     const headers = [
@@ -257,7 +321,8 @@ function LeadsPage() {
         <div>
           <h1 className="break-words text-3xl sm:text-4xl">Leads</h1>
           <p className="text-sm text-muted-foreground">
-            {filtered.length} of {leads.length} leads · All accounts
+            {filtered.length} leads ·{" "}
+            {listMode === "trash" ? "Prullenbak" : listMode === "flagged" ? "Gemarkeerd" : "Actief"}
           </p>
         </div>
 
@@ -407,6 +472,28 @@ function LeadsPage() {
         </div>
       </div>
 
+      <div className="flex flex-wrap gap-2" aria-label="Leadweergave">
+        {[
+          { value: "active", label: "Actieve leads" },
+          { value: "flagged", label: "Gemarkeerd" },
+          { value: "trash", label: "Prullenbak" },
+        ].map((mode) => (
+          <Button
+            key={mode.value}
+            variant={listMode === mode.value ? "default" : "outline"}
+            aria-pressed={listMode === mode.value}
+            onClick={() => setListMode(mode.value)}
+          >
+            {mode.label}
+          </Button>
+        ))}
+      </div>
+      {listMode === "trash" && (
+        <p className="text-sm text-muted-foreground">
+          Verwijderde leads tellen niet mee in je dashboard of prospectflow. Je kunt ze hier
+          herstellen, inclusief hun documenten en geschiedenis.
+        </p>
+      )}
       <Card>
         <CardContent className="flex flex-wrap gap-3 pt-6">
           <div className="relative min-w-0 basis-full sm:min-w-56 sm:flex-1">
@@ -483,11 +570,12 @@ function LeadsPage() {
               <Badge variant="outline">{labelFor(SOURCES, lead.source)}</Badge>
               <StageChip
                 stage={lead.stage}
-                canEdit={canManageLead(lead)}
+                canEdit={canManageLead(lead) && !lead.deleted_at}
                 onStageChange={(stage) => updateLead.mutate({ id: lead.id, patch: { stage } })}
               />
             </div>
-            <p className="mt-3 text-xs text-muted-foreground">{nameFor(lead.owner_id)}</p>
+            <p className="my-3 text-xs text-muted-foreground">{nameFor(lead.owner_id)}</p>
+            {actionsFor(lead)}
           </article>
         ))}
         {leadsLoading && <p role="status">Loading leads…</p>}
@@ -509,6 +597,7 @@ function LeadsPage() {
               <TableHead>Channel</TableHead>
               <TableHead>Stage</TableHead>
               <TableHead>Owner</TableHead>
+              <TableHead>Acties</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -546,31 +635,32 @@ function LeadsPage() {
                 <TableCell onClick={(event) => event.stopPropagation()}>
                   <StageChip
                     stage={lead.stage}
-                    canEdit={canManageLead(lead)}
+                    canEdit={canManageLead(lead) && !lead.deleted_at}
                     onStageChange={(stage) => updateLead.mutate({ id: lead.id, patch: { stage } })}
                   />
                 </TableCell>
 
                 <TableCell className="text-sm">{nameFor(lead.owner_id)}</TableCell>
+                <TableCell>{actionsFor(lead)}</TableCell>
               </TableRow>
             ))}
             {leadsLoading && (
               <TableRow>
-                <TableCell colSpan={5} role="status">
+                <TableCell colSpan={6} role="status">
                   Loading leads…
                 </TableCell>
               </TableRow>
             )}
             {leadsError && (
               <TableRow>
-                <TableCell colSpan={5} role="alert">
+                <TableCell colSpan={6} role="alert">
                   Could not load leads. <Button onClick={() => reloadLeads()}>Retry</Button>
                 </TableCell>
               </TableRow>
             )}
             {!leadsLoading && !leadsError && filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
                   No leads match these filters.
                 </TableCell>
               </TableRow>
@@ -586,12 +676,13 @@ function LeadsPage() {
               <SheetHeader>
                 <SheetTitle className="text-2xl">{openLead.company}</SheetTitle>
               </SheetHeader>
+              <div className="pt-4">{actionsFor(openLead)}</div>
               <LeadDetail
                 key={openLead.id}
                 lead={openLead}
                 ownerName={nameFor(openLead.owner_id)}
                 profiles={profiles}
-                canManage={Boolean(me)}
+                canManage={Boolean(me) && !openLead.deleted_at}
 
                 onPatch={(patch) => updateLead.mutateAsync({ id: openLead.id, patch })}
               />
@@ -599,6 +690,48 @@ function LeadsPage() {
           )}
         </SheetContent>
       </Sheet>
+      <Dialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => !open && !updateLead.isPending && setDeleteTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Lead verwijderen?</DialogTitle>
+            <DialogDescription>
+              {deleteTarget?.company} wordt naar de prullenbak verplaatst. De aanvraag, documenten
+              en geschiedenis blijven bewaard. Je kunt de lead later herstellen.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              disabled={updateLead.isPending}
+              onClick={() => setDeleteTarget(null)}
+            >
+              Annuleren
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={updateLead.isPending}
+              onClick={() => {
+                if (!deleteTarget) return;
+                updateLead.mutate(
+                  { id: deleteTarget.id, patch: { deleted_at: new Date().toISOString() } },
+                  {
+                    onSuccess: () => {
+                      setDeleteTarget(null);
+                      setOpenLeadId(null);
+                      toast.success("Lead naar prullenbak verplaatst");
+                    },
+                  },
+                );
+              }}
+            >
+              Naar prullenbak
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

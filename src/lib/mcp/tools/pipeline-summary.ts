@@ -13,7 +13,10 @@ export default defineTool({
       return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
     }
     const supabase = supabaseForUser(ctx);
-    const { data, error } = await supabase.from("leads").select("stage, source, value_estimate");
+    const { data, error } = await supabase
+      .from("leads")
+      .select("stage, source, value_estimate")
+      .is("deleted_at", null);
     if (error) {
       return { content: [{ type: "text", text: error.message }], isError: true };
     }

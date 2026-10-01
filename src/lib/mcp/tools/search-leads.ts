@@ -24,6 +24,7 @@ export default defineTool({
       .select(
         "id, company, contact_name, email, phone, city, source, stage, campaign, priority, value_estimate, owner_id, last_touch_at",
       )
+      .is("deleted_at", null)
       .order("priority", { ascending: false })
       .order("updated_at", { ascending: false })
       .limit(Math.min(Math.max(limit ?? 20, 1), 100));

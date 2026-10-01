@@ -112,6 +112,7 @@ export const Route = createFileRoute("/api/public/inbound-lead")({
             .from("leads")
             .update({
               last_touch_at: stamp,
+              deleted_at: null,
               ...(noteLine
                 ? { notes: [current?.notes, noteLine].filter(Boolean).join("\n\n") }
                 : {}),

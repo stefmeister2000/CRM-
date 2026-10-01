@@ -147,6 +147,8 @@ export type Database = {
       };
       leads: {
         Row: {
+          deleted_at: string | null;
+          flagged: boolean;
           campaign: string | null;
           city: string | null;
           company: string;
@@ -174,6 +176,8 @@ export type Database = {
           website: string | null;
         };
         Insert: {
+          deleted_at?: string | null;
+          flagged?: boolean;
           campaign?: string | null;
           city?: string | null;
           company: string;
@@ -201,6 +205,8 @@ export type Database = {
           website?: string | null;
         };
         Update: {
+          deleted_at?: string | null;
+          flagged?: boolean;
           campaign?: string | null;
           city?: string | null;
           company?: string;
