@@ -1,3 +1,4 @@
+import { WebsiteRequest } from "@/components/WebsiteRequest";
 import { usePipelineLeads } from "@/hooks/use-pipeline-leads";
 import { LeadTextField } from "@/components/LeadTextField";
 import { LeadDocuments } from "@/components/LeadDocuments";
@@ -640,6 +641,7 @@ function FilterSelect({
 }
 
 interface LeadRow {
+  website: string | null;
   value_estimate: number | null;
   id: string;
   company: string;
@@ -748,234 +750,304 @@ function LeadDetail({
   });
 
   return (
-    <div className="space-y-6 pt-4">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Company">
-          <LeadTextField
-            label="Company"
-            required
-            value={lead.company}
-            onSave={(value) => onPatch({ company: value })}
-            disabled={!canManage}
-          />
-        </Field>
-        <Field label="Contact name">
-          <LeadTextField
-            label="Contact name"
-            value={lead.contact_name ?? ""}
-            onSave={(value) => onPatch({ contact_name: value || null })}
-            disabled={!canManage}
-          />
-        </Field>
-        <Field label="Job title">
-          <LeadTextField
-            label="Job title"
-            value={lead.job_title ?? ""}
-            onSave={(value) => onPatch({ job_title: value || null })}
-            disabled={!canManage}
-          />
-        </Field>
-        <Field label="Email">
-          <LeadTextField
-            label="Email"
-            value={lead.email ?? ""}
-            onSave={(value) => onPatch({ email: value || null })}
-            disabled={!canManage}
-          />
-        </Field>
-        <Field label="Phone">
-          <LeadTextField
-            label="Phone"
-            value={lead.phone ?? ""}
-            onSave={(value) => onPatch({ phone: value || null })}
-            disabled={!canManage}
-          />
-        </Field>
-        <Field label="City">
-          <LeadTextField
-            label="City"
-            value={lead.city ?? ""}
-            onSave={(value) => onPatch({ city: value || null })}
-            disabled={!canManage}
-          />
-        </Field>
-        <Field label="Campaign">
-          <LeadTextField
-            label="Campaign"
-            value={lead.campaign ?? ""}
-            onSave={(value) => onPatch({ campaign: value || null })}
-            disabled={!canManage}
-          />
-        </Field>
-        <div className="flex flex-col justify-end pb-1">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Last touch</p>
-          <p className="text-sm">{formatDate(lead.last_touch_at)}</p>
-        </div>
-      </div>
-
-      {lead.linkedin_url && (
-        <a
-          href={lead.linkedin_url}
-          target="_blank"
-          rel="noreferrer"
-          className="text-sm text-primary underline"
-        >
-          Open LinkedIn profile
-        </a>
-      )}
-      <DealValueEditor
-        id={lead.id}
-        company={lead.company}
-        value={lead.value_estimate}
-        disabled={!canManage}
-      />
-      <LeadDocuments id={lead.id} />
-      <Field label="Notes">
-        <LeadTextField
-          label="Notes"
-          multiline
-          value={lead.notes ?? ""}
-          onSave={(value) => onPatch({ notes: value || null })}
-          disabled={!canManage}
-          placeholder="General notes about this account..."
-        />
-      </Field>
-
-      <div className="panel space-y-3 p-4">
-        <p className="font-display text-lg">Pipeline</p>
-        <PipelineTracker
-          stage={lead.stage}
-          canEdit={canManage}
-          onStageChange={(value) => void onPatch({ stage: value }).catch(() => undefined)}
-        />
-        {!canManage && (
-          <p className="text-xs text-muted-foreground">Sign in again to move this lead.</p>
+    <div className="space-y-5 pt-4">
+      <WebsiteRequest
+        notes={lead.notes}
+        source={lead.source}
+        requests={activities.filter(
+          (activity) => activity.direction === "inbound" && activity.channel === "note",
         )}
-
-        <div className="space-y-2 rounded-md border border-border bg-secondary/30 p-3">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">
-            Comments on this step — {STAGE_META[lead.stage as Stage]?.short ?? lead.stage}
-          </p>
-          {stageComments.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No comment on this step yet.</p>
-          ) : (
-            <ul className="space-y-1.5">
-              {stageComments.map((comment) => (
-                <li key={comment.id} className="text-sm">
-                  <span className="text-muted-foreground">
-                    {formatDate(comment.occurred_at)} —{" "}
-                  </span>
-                  {comment.body}
-                </li>
-              ))}
-            </ul>
-          )}
-          <Textarea
-            placeholder="Add a comment for this step..."
-            value={stageComment}
-            onChange={(e) => setStageComment(e.target.value)}
-            disabled={!canManage}
-          />
-          <Button
-            size="sm"
-            variant="secondary"
-            disabled={!canManage || !stageComment.trim() || addStageComment.isPending}
-            onClick={() => addStageComment.mutate()}
+      />
+      <section className="space-y-2 rounded-xl border p-4" aria-label="Contact">
+        <p className="font-semibold">{lead.contact_name || lead.company}</p>
+        {lead.email && (
+          <a
+            className="block break-all text-sm text-primary hover:underline"
+            href={`mailto:${lead.email}`}
           >
-            Save comment
-          </Button>
-        </div>
-      </div>
-
-      {canManage && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Importance">
-            <Select
-              value={String(lead.priority)}
-              onValueChange={(value) =>
-                void onPatch({ priority: Number(value) }).catch(() => undefined)
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {[5, 4, 3, 2, 1].map((p) => (
-                  <SelectItem key={p} value={String(p)}>
-                    {priorityLabel(p)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field label="Owner">
-            <Select
-              value={lead.owner_id ?? "none"}
-              onValueChange={(value) =>
-                void onPatch({ owner_id: value === "none" ? null : value }).catch(() => undefined)
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Unassigned</SelectItem>
-                {profiles.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.full_name ?? p.email ?? "Team member"}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-        </div>
-      )}
-
-      <div className="panel space-y-3 p-4">
-        <p className="font-display text-lg">Log outreach</p>
-        <Field label="Channel">
-          <Select value={channel} onValueChange={(value) => setChannel(value as Channel)}>
-            <SelectTrigger>
+            {lead.email}
+          </a>
+        )}
+        {lead.phone && (
+          <a
+            className="block text-sm text-primary hover:underline"
+            href={`tel:${lead.phone.replace(/[^+0-9]/g, "")}`}
+          >
+            {lead.phone}
+          </a>
+        )}
+        {lead.website && <p className="break-all text-sm text-muted-foreground">{lead.website}</p>}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3">
+          <span className="text-sm">Fase</span>
+          <Select
+            value={lead.stage}
+            disabled={!canManage}
+            onValueChange={(stage) =>
+              void onPatch({ stage: stage as Stage }).catch(() => undefined)
+            }
+          >
+            <SelectTrigger className="w-48">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {CHANNELS.map((c) => (
-                <SelectItem key={c.value} value={c.value}>
-                  {c.label}
+              {STAGES.map((stage) => (
+                <SelectItem key={stage.value} value={stage.value}>
+                  {stage.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-        </Field>
-        <Field label="Notes">
-          <Textarea
-            placeholder="What did you send or discuss?"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
-        </Field>
-        <Button onClick={() => logActivity.mutate()} disabled={logActivity.isPending}>
-          Log it
-        </Button>
-      </div>
-
-      <div className="space-y-2">
-        <p className="font-display text-lg">History</p>
-        {activities.length === 0 && (
-          <p className="text-sm text-muted-foreground">No outreach logged for this lead yet.</p>
-        )}
-        {activities.map((activity) => (
-          <div key={activity.id} className="rounded-md border border-border p-3">
-            <div className="flex items-center justify-between text-sm">
-              <span className="font-medium">{labelFor(CHANNELS, activity.channel)}</span>
-              <span className="text-xs text-muted-foreground">
-                {formatDate(activity.occurred_at)}
-              </span>
+        </div>
+      </section>
+      <details className="rounded-xl border p-4">
+        <summary className="cursor-pointer text-sm font-medium">Contactgegevens bewerken</summary>
+        <div className="pt-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Company">
+              <LeadTextField
+                label="Company"
+                required
+                value={lead.company}
+                onSave={(value) => onPatch({ company: value })}
+                disabled={!canManage}
+              />
+            </Field>
+            <Field label="Contact name">
+              <LeadTextField
+                label="Contact name"
+                value={lead.contact_name ?? ""}
+                onSave={(value) => onPatch({ contact_name: value || null })}
+                disabled={!canManage}
+              />
+            </Field>
+            <Field label="Job title">
+              <LeadTextField
+                label="Job title"
+                value={lead.job_title ?? ""}
+                onSave={(value) => onPatch({ job_title: value || null })}
+                disabled={!canManage}
+              />
+            </Field>
+            <Field label="Email">
+              <LeadTextField
+                label="Email"
+                value={lead.email ?? ""}
+                onSave={(value) => onPatch({ email: value || null })}
+                disabled={!canManage}
+              />
+            </Field>
+            <Field label="Phone">
+              <LeadTextField
+                label="Phone"
+                value={lead.phone ?? ""}
+                onSave={(value) => onPatch({ phone: value || null })}
+                disabled={!canManage}
+              />
+            </Field>
+            <Field label="City">
+              <LeadTextField
+                label="City"
+                value={lead.city ?? ""}
+                onSave={(value) => onPatch({ city: value || null })}
+                disabled={!canManage}
+              />
+            </Field>
+            <Field label="Campaign">
+              <LeadTextField
+                label="Campaign"
+                value={lead.campaign ?? ""}
+                onSave={(value) => onPatch({ campaign: value || null })}
+                disabled={!canManage}
+              />
+            </Field>
+            <div className="flex flex-col justify-end pb-1">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Last touch</p>
+              <p className="text-sm">{formatDate(lead.last_touch_at)}</p>
             </div>
-            {activity.body && <p className="text-sm text-muted-foreground">{activity.body}</p>}
           </div>
-        ))}
-      </div>
+
+          {lead.linkedin_url && (
+            <a
+              href={lead.linkedin_url}
+              target="_blank"
+              rel="noreferrer"
+              className="text-sm text-primary underline"
+            >
+              Open LinkedIn profile
+            </a>
+          )}
+        </div>
+      </details>
+      <details className="rounded-xl border p-4">
+        <summary className="cursor-pointer text-sm font-medium">Dealwaarde & documenten</summary>
+        <div className="space-y-4 pt-4">
+          <DealValueEditor
+            id={lead.id}
+            company={lead.company}
+            value={lead.value_estimate}
+            disabled={!canManage}
+          />
+          <LeadDocuments id={lead.id} />
+        </div>
+      </details>
+      <details className="rounded-xl border p-4">
+        <summary className="cursor-pointer text-sm font-medium">
+          Interne notities & opvolging
+        </summary>
+        <div className="space-y-5 pt-4">
+          <Field label="Notes">
+            <LeadTextField
+              label="Notes"
+              multiline
+              value={lead.notes ?? ""}
+              onSave={(value) => onPatch({ notes: value || null })}
+              disabled={!canManage}
+              placeholder="General notes about this account..."
+            />
+          </Field>
+
+          <div className="panel space-y-3 p-4">
+            <p className="font-display text-lg">Pipeline</p>
+            <PipelineTracker
+              stage={lead.stage}
+              canEdit={canManage}
+              onStageChange={(value) => void onPatch({ stage: value }).catch(() => undefined)}
+            />
+            {!canManage && (
+              <p className="text-xs text-muted-foreground">Sign in again to move this lead.</p>
+            )}
+
+            <div className="space-y-2 rounded-md border border-border bg-secondary/30 p-3">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Comments on this step — {STAGE_META[lead.stage as Stage]?.short ?? lead.stage}
+              </p>
+              {stageComments.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No comment on this step yet.</p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {stageComments.map((comment) => (
+                    <li key={comment.id} className="text-sm">
+                      <span className="text-muted-foreground">
+                        {formatDate(comment.occurred_at)} —{" "}
+                      </span>
+                      {comment.body}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <Textarea
+                placeholder="Add a comment for this step..."
+                value={stageComment}
+                onChange={(e) => setStageComment(e.target.value)}
+                disabled={!canManage}
+              />
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={!canManage || !stageComment.trim() || addStageComment.isPending}
+                onClick={() => addStageComment.mutate()}
+              >
+                Save comment
+              </Button>
+            </div>
+          </div>
+
+          {canManage && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Importance">
+                <Select
+                  value={String(lead.priority)}
+                  onValueChange={(value) =>
+                    void onPatch({ priority: Number(value) }).catch(() => undefined)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[5, 4, 3, 2, 1].map((p) => (
+                      <SelectItem key={p} value={String(p)}>
+                        {priorityLabel(p)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="Owner">
+                <Select
+                  value={lead.owner_id ?? "none"}
+                  onValueChange={(value) =>
+                    void onPatch({ owner_id: value === "none" ? null : value }).catch(
+                      () => undefined,
+                    )
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Unassigned</SelectItem>
+                    {profiles.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.full_name ?? p.email ?? "Team member"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
+          )}
+
+          <div className="panel space-y-3 p-4">
+            <p className="font-display text-lg">Log outreach</p>
+            <Field label="Channel">
+              <Select value={channel} onValueChange={(value) => setChannel(value as Channel)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CHANNELS.map((c) => (
+                    <SelectItem key={c.value} value={c.value}>
+                      {c.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Notes">
+              <Textarea
+                placeholder="What did you send or discuss?"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+            </Field>
+            <Button onClick={() => logActivity.mutate()} disabled={logActivity.isPending}>
+              Log it
+            </Button>
+          </div>
+        </div>
+      </details>
+      <details className="rounded-xl border p-4">
+        <summary className="cursor-pointer text-sm font-medium">
+          Geschiedenis ({activities.length})
+        </summary>
+        <div className="space-y-2 pt-4">
+          {activities.length === 0 && (
+            <p className="text-sm text-muted-foreground">No outreach logged for this lead yet.</p>
+          )}
+          {activities.map((activity) => (
+            <div key={activity.id} className="rounded-md border border-border p-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium">{labelFor(CHANNELS, activity.channel)}</span>
+                <span className="text-xs text-muted-foreground">
+                  {formatDate(activity.occurred_at)}
+                </span>
+              </div>
+              {activity.body && <p className="text-sm text-muted-foreground">{activity.body}</p>}
+            </div>
+          ))}
+        </div>
+      </details>
     </div>
   );
 }
