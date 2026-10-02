@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test:integrations": "node --experimental-strip-types --test tests/email-capture.test.mjs"
+    "test:integrations": "node --experimental-strip-types --test tests/*.test.mjs"
   },
   "overrides": {
     "rolldown": "1.2.1"
