@@ -15,13 +15,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useServerFn } from "@tanstack/react-start";
 import {
   approveAccountRequest,
-  createTeamMember,
+  createTeamInvitation,
+  removeTeamMember,
   declineAccountRequest,
 } from "@/lib/team.functions";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -126,7 +136,24 @@ function SettingsPage() {
     onError: (error: Error) => toast.error(error.message),
   });
 
-  const addTeamMember = useServerFn(createTeamMember);
+  const addTeamMember = useServerFn(createTeamInvitation);
+  const removeTeam = useServerFn(removeTeamMember);
+  const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null);
+  const [invitation, setInvitation] = useState<{ id: string; email: string; url: string } | null>(
+    null,
+  );
+  const remove = useMutation({
+    mutationFn: (userId: string) => removeTeam({ data: { userId } }),
+    onSuccess: (_, userId) => {
+      setRemoving(null);
+      if (invitation?.id === userId) setInvitation(null);
+      toast.success(
+        nl ? "Persoon verwijderd. CRM-toegang ingetrokken." : "Member removed. CRM access revoked.",
+      );
+      queryClient.invalidateQueries();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
   const approveRequest = useServerFn(approveAccountRequest);
   const declineRequest = useServerFn(declineAccountRequest);
 
@@ -154,26 +181,25 @@ function SettingsPage() {
   const [newMember, setNewMember] = useState<{
     fullName: string;
     email: string;
-    password: string;
     team: string;
     role: Role;
-  }>({ fullName: "", email: "", password: "", team: "", role: "rep" });
+  }>({ fullName: "", email: "", team: "", role: "rep" });
 
   const addMember = useMutation({
     mutationFn: async () => {
-      await addTeamMember({
+      return addTeamMember({
         data: {
           fullName: newMember.fullName.trim(),
           email: newMember.email.trim(),
-          password: newMember.password,
           role: newMember.role,
           ...(newMember.team.trim() ? { team: newMember.team.trim() } : {}),
         },
       });
     },
-    onSuccess: () => {
-      toast.success("Team member added");
-      setNewMember({ fullName: "", email: "", password: "", team: "", role: "rep" });
+    onSuccess: (result) => {
+      setInvitation(result);
+      toast.success(nl ? "Uitnodigingslink klaar om te delen" : "Invitation link ready to share");
+      setNewMember({ fullName: "", email: "", team: "", role: "rep" });
       queryClient.invalidateQueries({ queryKey: ["profiles"] });
       queryClient.invalidateQueries({ queryKey: ["user-roles"] });
     },
@@ -242,6 +268,35 @@ function SettingsPage() {
 
   return (
     <div className="space-y-8">
+      <AlertDialog
+        open={!!removing}
+        onOpenChange={(open) => {
+          if (!open && !remove.isPending) setRemoving(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{nl ? "Persoon verwijderen?" : "Remove member?"}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {nl
+                ? `${removing?.name ?? "Deze persoon"} verliest de CRM-toegang. Leads en contacthistoriek blijven bewaard. Hun leads worden niet-toegewezen; je kunt ze daarna aan iemand anders toewijzen.`
+                : `${removing?.name ?? "This person"} will lose CRM access. Leads and contact history are kept. Their leads become unassigned so you can reassign them.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={remove.isPending}>
+              {nl ? "Annuleren" : "Cancel"}
+            </AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={remove.isPending}
+              onClick={() => removing && remove.mutate(removing.id)}
+            >
+              {remove.isPending ? "…" : nl ? "Verwijderen" : "Remove"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <div>
         <h1 className="break-words text-3xl sm:text-4xl">
           {isAdmin ? "Team & ownership" : "ChatGPT koppelen"}
@@ -360,6 +415,7 @@ function SettingsPage() {
                           </div>
                           {isAdmin ? (
                             <Select
+                              disabled={member.id === me?.id || setRole.isPending}
                               value={member.role}
                               onValueChange={(value) =>
                                 setRole.mutate({ userId: member.id, role: value as Role })
@@ -381,6 +437,21 @@ function SettingsPage() {
                           )}
                         </CardHeader>
                         <CardContent className="space-y-4">
+                          {isAdmin && member.id !== me?.id && (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              disabled={remove.isPending}
+                              onClick={() =>
+                                setRemoving({
+                                  id: member.id,
+                                  name: member.full_name || member.email || "Team member",
+                                })
+                              }
+                            >
+                              {nl ? "Persoon verwijderen" : "Remove member"}
+                            </Button>
+                          )}
                           <div className="grid grid-cols-4 gap-2 text-center">
                             <Metric label="Accounts" value={String(member.owned)} />
                             <Metric label="Live" value={String(member.open)} />
@@ -416,17 +487,16 @@ function SettingsPage() {
             {isAdmin && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Invite a team member</CardTitle>
+                  <CardTitle>{nl ? "Persoon uitnodigen" : "Invite a team member"}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="text-sm text-muted-foreground">
-                    As admin you can create an account for anyone here and set their role right
-                    away. Share the temporary password with them — colleagues can also sign
-                    themselves up on the login page, and they start as Sales rep until you change
-                    their role above.
+                    {nl
+                      ? "Maak een persoonlijke uitnodigingslink en stuur deze door via e-mail of een bericht. De ontvanger kiest zelf een wachtwoord en krijgt de geselecteerde rol. Er wordt niet automatisch een e-mail verstuurd."
+                      : "Create a personal invitation link to share by email or message. The recipient chooses their own password and receives the selected role. No email is sent automatically."}
                   </p>
 
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     <div className="space-y-1">
                       <Label htmlFor="new-name">Full name</Label>
                       <Input
@@ -442,14 +512,6 @@ function SettingsPage() {
                         type="email"
                         value={newMember.email}
                         onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="new-password">Temporary password</Label>
-                      <Input
-                        id="new-password"
-                        value={newMember.password}
-                        onChange={(e) => setNewMember({ ...newMember, password: e.target.value })}
                       />
                     </div>
                     <div className="space-y-1">
@@ -481,9 +543,55 @@ function SettingsPage() {
                       </Select>
                     </div>
                   </div>
-                  <Button onClick={() => addMember.mutate()} disabled={addMember.isPending}>
-                    {addMember.isPending ? "Creating…" : "Create account"}
+                  <Button
+                    onClick={() => addMember.mutate()}
+                    disabled={
+                      addMember.isPending || !newMember.fullName.trim() || !newMember.email.trim()
+                    }
+                  >
+                    {addMember.isPending
+                      ? nl
+                        ? "Bezig…"
+                        : "Creating…"
+                      : nl
+                        ? "Uitnodigingslink maken"
+                        : "Create invitation link"}
                   </Button>
+                  {invitation && (
+                    <div className="space-y-3 rounded-lg border bg-secondary/40 p-4" role="status">
+                      <p className="text-sm font-medium">
+                        {nl ? "Uitnodiging voor" : "Invitation for"} {invitation.email}
+                      </p>
+                      <Input
+                        aria-label={nl ? "Uitnodigingslink" : "Invitation link"}
+                        readOnly
+                        value={invitation.url}
+                        onFocus={(e) => e.target.select()}
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(invitation.url);
+                            toast.success(nl ? "Link gekopieerd" : "Link copied");
+                          } catch {
+                            toast.error(
+                              nl
+                                ? "Selecteer en kopieer de link hierboven."
+                                : "Select and copy the link above.",
+                            );
+                          }
+                        }}
+                      >
+                        {nl ? "Link kopiëren" : "Copy link"}
+                      </Button>
+                      <p className="text-xs text-muted-foreground">
+                        {nl
+                          ? "Deel deze persoonlijke link alleen met de ontvanger. Hij is één keer bruikbaar en vervalt volgens de ingestelde geldigheidsduur. Maak een nieuwe link als hij verlopen is. Bewaar de link voordat je deze pagina sluit."
+                          : "Share this personal link only with its recipient. It works once and expires according to the configured validity period. Generate a new link if it expires. Copy it before leaving this page."}
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -502,7 +610,7 @@ function SettingsPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="unassigned">Unassigned accounts</SelectItem>
-                        {profiles.map((p) => (
+                        {members.map((p) => (
                           <SelectItem key={p.id} value={p.id}>
                             {p.full_name ?? p.email ?? "Team member"}
                           </SelectItem>
@@ -517,7 +625,7 @@ function SettingsPage() {
                         <SelectValue placeholder="Pick a rep" />
                       </SelectTrigger>
                       <SelectContent>
-                        {profiles
+                        {members
                           .filter((p) => p.id !== moveFrom)
                           .map((p) => (
                             <SelectItem key={p.id} value={p.id}>

@@ -288,6 +288,17 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      remove_crm_member: { Args: { _user_id: string }; Returns: undefined };
+      configure_crm_invitation: {
+        Args: {
+          _user_id: string;
+          _full_name: string;
+          _team: string;
+          _role: Database["public"]["Enums"]["app_role"];
+        };
+        Returns: undefined;
+      };
+
       claim_admin: { Args: never; Returns: boolean };
       ensure_rep_role: { Args: never; Returns: undefined };
       has_role: {
