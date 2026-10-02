@@ -5,11 +5,11 @@ Independent React / TanStack Start application with Supabase authentication and 
 Run `npm install`, configure `.env` from `.env.example`, then run `npm run dev`.
 Build with `npm run build`; start the resulting server with `node .output/server/index.mjs` and the server environment variables configured.
 
-The previous database has been disconnected. The replacement project is pending creation in the Stef Keppens Sales CRM organization (tvjexlidzricyxpfrkaz). No existing leads or accounts will be copied.
+The production CRM is deployed at https://crm.verkoop.studio and uses its configured Supabase project. Preserve the populated production database; bootstrap scripts below are for a new empty installation only.
 
 For the new project, run `supabase/bootstrap/fresh-crm.sql` once in its SQL editor. After the owner signs up, use `supabase/bootstrap/first-admin.sql` with the verified owner UUID. Configure Auth site/redirect URLs for the CRM. Google login requires your own Google provider configuration. Keep the service role key on the server only.
 
-The MCP endpoint is `/mcp`, powered by the standard MCP SDK. Set `CRM_PUBLIC_URL` to the deployed HTTPS origin and enable the Supabase OAuth server with `/oauth/consent` as its authorization path before connecting an AI client. Website intake is available at `/api/public/inbound-lead` using a server-only intake token configured under Settings. The local Stefmeister website is connected; production intake requires a public HTTPS CRM deployment. AI activation remains pending.
+The MCP endpoint is `/mcp`, powered by the standard MCP SDK. Set `CRM_PUBLIC_URL` to the deployed HTTPS origin and enable the Supabase OAuth server with `/oauth/consent` as its authorization path before connecting an AI client. Website intake is available at `/api/public/inbound-lead` using a server-only intake token configured under Settings. The production intake and authenticated MCP endpoint were verified during the 2026-10-02 audit. Authorization in an external AI client must still be tested separately.
 
 Validation: `npx tsc --noEmit`, `npm run test:integrations`, `npm run build`.
 
@@ -25,4 +25,4 @@ Under **Settings → Team & ownership**, administrators can create a personal in
 
 **Remove member** revokes every CRM role, marks their access request declined, and unassigns their leads in one database transaction. Existing sessions lose access through RLS. Auth identity, profile, documents, and activity history remain intact; this is removal from the CRM team, not deletion of historical data or the Supabase identity. Administrators cannot remove themselves. Accounts without roles are not listed as eligible lead owners.
 
-Validation: `npm run test:integrations`, `npx tsc --noEmit`, `npm run build`. Database regressions can be run with `psql -v ON_ERROR_STOP=1 -f tests/team-management.sql` **only against a new disposable local PostgreSQL database**; the script builds a mock Auth schema, loads the bootstrap and migration, and checks direct RPC permissions, access revocation, and history preservation. An end-to-end invitation against hosted Supabase still requires the configured CRM environment.
+Validation: `npm run test:integrations`, `npx tsc --noEmit`, `npm run build`. Database regressions can be run with `psql -v ON_ERROR_STOP=1 -f tests/team-management.sql` **only against a new disposable local PostgreSQL database**; the script builds a mock Auth schema, loads the bootstrap and migration, and checks direct RPC permissions, access revocation, and history preservation. The hosted invitation lifecycle was verified with temporary accounts on 2026-10-02, including password login, one-use tokens and access revocation.

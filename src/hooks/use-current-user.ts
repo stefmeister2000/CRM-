@@ -27,7 +27,7 @@ export function useCurrentUser() {
           full_name:
             (user.user_metadata?.["full_name"] as string | undefined) ?? user.email ?? null,
         },
-        { onConflict: "id" },
+        { onConflict: "id", ignoreDuplicates: true },
       );
       const [{ data: profile }, { data: roleRows }] = await Promise.all([
         supabase.from("profiles").select("full_name, team, email").eq("id", user.id).maybeSingle(),

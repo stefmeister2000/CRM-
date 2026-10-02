@@ -120,13 +120,15 @@ function SettingsPage() {
 
   const setRole = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: Role }) => {
-      const { error: deleteError } = await supabase
+      if (userId === me?.id) throw new Error("Je kunt je eigen rol niet wijzigen.");
+      // A single UPDATE is atomic: a failed change preserves the existing role.
+      const { data, error } = await supabase
         .from("user_roles")
-        .delete()
-        .eq("user_id", userId);
-      if (deleteError) throw deleteError;
-      const { error } = await supabase.from("user_roles").insert({ user_id: userId, role });
+        .update({ role })
+        .eq("user_id", userId)
+        .select("id");
       if (error) throw error;
+      if (!data?.length) throw new Error("Rol niet gewijzigd. Vernieuw het teamoverzicht.");
     },
     onSuccess: () => {
       toast.success("Role updated");

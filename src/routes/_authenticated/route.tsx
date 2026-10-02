@@ -18,7 +18,7 @@ export const Route = createFileRoute("/_authenticated")({
         .from("profiles")
         .upsert(
           { id: data.user.id, email: data.user.email ?? null, full_name: fullName },
-          { onConflict: "id" },
+          { onConflict: "id", ignoreDuplicates: true },
         );
       if (data.user.email) {
         const { data: existingRequest } = await supabase
