@@ -187,6 +187,7 @@ function SettingsPage() {
 
   const addMember = useMutation({
     mutationFn: async () => {
+      setInvitation(null);
       return addTeamMember({
         data: {
           fullName: newMember.fullName.trim(),
@@ -496,67 +497,94 @@ function SettingsPage() {
                       : "Create a personal invitation link to share by email or message. The recipient chooses their own password and receives the selected role. No email is sent automatically."}
                   </p>
 
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <div className="space-y-1">
-                      <Label htmlFor="new-name">Full name</Label>
-                      <Input
-                        id="new-name"
-                        value={newMember.fullName}
-                        onChange={(e) => setNewMember({ ...newMember, fullName: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="new-email">Work email</Label>
-                      <Input
-                        id="new-email"
-                        type="email"
-                        value={newMember.email}
-                        onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="new-team">Team (optional)</Label>
-                      <Input
-                        id="new-team"
-                        value={newMember.team}
-                        onChange={(e) => setNewMember({ ...newMember, team: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label>Role</Label>
-                      <Select
-                        value={newMember.role}
-                        onValueChange={(value) =>
-                          setNewMember({ ...newMember, role: value as Role })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ROLES.map((r) => (
-                            <SelectItem key={r.value} value={r.value}>
-                              {r.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <Button
-                    onClick={() => addMember.mutate()}
-                    disabled={
-                      addMember.isPending || !newMember.fullName.trim() || !newMember.email.trim()
-                    }
+                  <form
+                    className="space-y-3"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      if (!addMember.isPending) addMember.mutate();
+                    }}
                   >
-                    {addMember.isPending
-                      ? nl
-                        ? "Bezig…"
-                        : "Creating…"
-                      : nl
-                        ? "Uitnodigingslink maken"
-                        : "Create invitation link"}
-                  </Button>
+                    <fieldset
+                      disabled={addMember.isPending}
+                      className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+                    >
+                      <div className="space-y-1">
+                        <Label htmlFor="new-name">Full name</Label>
+                        <Input
+                          id="new-name"
+                          required
+                          autoComplete="name"
+                          maxLength={200}
+                          value={newMember.fullName}
+                          onChange={(e) => setNewMember({ ...newMember, fullName: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="new-email">Work email</Label>
+                        <Input
+                          id="new-email"
+                          required
+                          autoComplete="email"
+                          type="email"
+                          value={newMember.email}
+                          onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="new-team">Team (optional)</Label>
+                        <Input
+                          id="new-team"
+                          maxLength={200}
+                          value={newMember.team}
+                          onChange={(e) => setNewMember({ ...newMember, team: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label>Role</Label>
+                        <Select
+                          value={newMember.role}
+                          onValueChange={(value) =>
+                            setNewMember({ ...newMember, role: value as Role })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ROLES.map((r) => (
+                              <SelectItem key={r.value} value={r.value}>
+                                {r.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </fieldset>
+                    <p className="text-sm text-muted-foreground">
+                      {nl
+                        ? "Vul de volledige naam en een geldig e-mailadres in. Team is optioneel."
+                        : "Enter the full name and a valid email address. Team is optional."}
+                    </p>
+                    {addMember.isError && (
+                      <p role="alert" className="text-sm text-destructive">
+                        {addMember.error.message}
+                      </p>
+                    )}
+                    <Button
+                      type="submit"
+                      disabled={
+                        addMember.isPending || !newMember.fullName.trim() || !newMember.email.trim()
+                      }
+                    >
+                      {addMember.isPending
+                        ? nl
+                          ? "Bezig…"
+                          : "Creating…"
+                        : nl
+                          ? "Uitnodigingslink maken"
+                          : "Create invitation link"}
+                    </Button>
+                  </form>
                   {invitation && (
                     <div className="space-y-3 rounded-lg border bg-secondary/40 p-4" role="status">
                       <p className="text-sm font-medium">

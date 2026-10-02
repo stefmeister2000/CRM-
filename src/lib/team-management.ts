@@ -43,7 +43,20 @@ export async function inviteMember(
     email: input.email,
     options: { redirectTo, data: { full_name: input.fullName } },
   });
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (
+      error.code === "email_exists" ||
+      error.code === "user_already_exists" ||
+      /already.*registered|already.*exists/i.test(error.message)
+    ) {
+      throw new Error(
+        "Dit e-mailadres heeft al een account. Laat deze persoon aanmelden met het bestaande wachtwoord. Een uitnodiging overschrijft geen bestaand account.",
+      );
+    }
+    if (error.status === 429)
+      throw new Error("Er zijn te veel aanvragen tegelijk. Wacht even en probeer opnieuw.");
+    throw new Error(error.message);
+  }
   if (!data.user?.id || !data.properties?.hashed_token)
     throw new Error("Uitnodiging kon niet worden aangemaakt.");
   const { error: setupError } = await client.rpc("configure_crm_invitation", {

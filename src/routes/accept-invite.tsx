@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase, isDatabaseConfigured } from "@/integrations/supabase/client";
+import { finishInvitation, type InvitationProgress } from "@/lib/accept-invitation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,12 +26,14 @@ function AcceptInvite() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [currentEmail, setCurrentEmail] = useState<string>();
-  const verifiedUser = useRef<string | null>(null);
+  const [ready, setReady] = useState(false);
+  const memory = useRef(new Map<string, string>());
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   useEffect(() => {
     setToken(new URLSearchParams(window.location.hash.slice(1)).get("token_hash") ?? "");
+    setReady(true);
     if (isDatabaseConfigured) {
       void supabase.auth.getUser().then(({ data }) => setCurrentEmail(data.user?.email));
     }
@@ -46,34 +49,32 @@ function AcceptInvite() {
     setBusy(true);
     setError("");
     try {
-      // Only consume the one-use token after a person submits; link previews cannot consume it.
-      if (!verifiedUser.current) {
-        const { data, error: verifyError } = await supabase.auth.verifyOtp({
-          token_hash: token,
-          type: "invite",
-        });
-        if (verifyError || !data.user || !data.session) {
-          throw new Error(
-            "Deze uitnodiging is verlopen, ongeldig of al gebruikt. Vraag je beheerder om een nieuwe link, of meld je aan als je al een wachtwoord hebt ingesteld.",
-          );
-        }
-        verifiedUser.current = data.user.id;
-        queryClient.clear();
-      }
-      const { data: auth, error: authError } = await supabase.auth.getUser();
-      if (authError || auth.user?.id !== verifiedUser.current)
-        throw new Error("Je sessie is gewijzigd. Open je uitnodiging opnieuw.");
-      const { data: roles, error: roleError } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", auth.user.id);
-      if (roleError) throw new Error(roleError.message);
-      if (!roles?.length)
-        throw new Error(
-          "Deze uitnodiging geeft geen CRM-toegang meer. Neem contact op met je beheerder.",
-        );
-      const { error: passwordError } = await supabase.auth.updateUser({ password });
-      if (passwordError) throw new Error(passwordError.message);
+      const progress: InvitationProgress = {
+        getItem: (key) => {
+          try {
+            return sessionStorage.getItem(key) ?? memory.current.get(key) ?? null;
+          } catch {
+            return memory.current.get(key) ?? null;
+          }
+        },
+        setItem: (key, value) => {
+          memory.current.set(key, value);
+          try {
+            sessionStorage.setItem(key, value);
+          } catch {
+            /* In-memory retry still works when storage is blocked. */
+          }
+        },
+        removeItem: (key) => {
+          memory.current.delete(key);
+          try {
+            sessionStorage.removeItem(key);
+          } catch {
+            /* Storage may be blocked. */
+          }
+        },
+      };
+      await finishInvitation(supabase, token, password, confirm, progress);
       window.history.replaceState(null, "", window.location.pathname);
       setPassword("");
       setConfirm("");
@@ -86,6 +87,8 @@ function AcceptInvite() {
           : "Uitnodiging accepteren is niet gelukt. Probeer opnieuw.",
       );
     } finally {
+      // Verification may switch identities even when the password step needs a retry.
+      queryClient.clear();
       setBusy(false);
     }
   }
@@ -97,7 +100,9 @@ function AcceptInvite() {
         <p className="text-sm text-muted-foreground">
           Kies je eigen wachtwoord om je uitnodiging te accepteren en de CRM te openen.
         </p>
-        {!isDatabaseConfigured ? (
+        {!ready ? (
+          <p role="status">Uitnodiging laden…</p>
+        ) : !isDatabaseConfigured ? (
           <p role="alert">De CRM is nog niet geconfigureerd. Neem contact op met je beheerder.</p>
         ) : !token ? (
           <p role="alert">
