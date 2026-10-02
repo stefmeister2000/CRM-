@@ -32,10 +32,24 @@ import {
   guessMapping,
   labelFor,
   parseCsv,
-  findDuplicate,
+  planLeadImport,
   type ImportFieldKey,
   type Source,
 } from "@/lib/sales";
+
+async function loadImportCandidates() {
+  const rows = [];
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await supabase
+      .from("leads")
+      .select("id, company, contact_name, email, linkedin_url")
+      .order("id")
+      .range(offset, offset + 499);
+    if (error) throw error;
+    rows.push(...data);
+    if (data.length < 500) return rows;
+  }
+}
 
 type LeadUpdate = Database["public"]["Tables"]["leads"]["Update"];
 
@@ -80,13 +94,7 @@ function ImportPage() {
 
   const { data: existingLeads = [] } = useQuery({
     queryKey: ["leads-dedupe"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("leads")
-        .select("id, company, contact_name, email, linkedin_url");
-      if (error) throw error;
-      return data;
-    },
+    queryFn: loadImportCandidates,
   });
 
   const { data: batches = [] } = useQuery({
@@ -151,33 +159,17 @@ function ImportPage() {
         dupes: [] as { row: ReturnType<typeof buildRows>[number]; existingId: string }[],
       };
     }
-    const parsed = buildRows();
-    const fresh: typeof parsed = [];
-    const dupes: { row: (typeof parsed)[number]; existingId: string }[] = [];
-    const seen = [...existingLeads];
-    for (const row of parsed) {
-      const hit = findDuplicate(row, seen);
-      if (hit) {
-        dupes.push({ row, existingId: hit.id });
-      } else {
-        fresh.push(row);
-        seen.push({
-          id: `new-${seen.length}`,
-          company: row.company,
-          contact_name: row.contact_name,
-          email: row.email,
-          linkedin_url: row.linkedin_url,
-        });
-      }
-    }
-    return { fresh, dupes };
+    return planLeadImport(buildRows(), existingLeads, () => crypto.randomUUID());
   }, [headers, mapping, existingLeads, buildRows]);
 
   const runImport = useMutation({
     mutationFn: async () => {
       if (!me) throw new Error("Not signed in");
       if (!mapping.company) throw new Error("Map the Company column first.");
-      const { fresh, dupes } = split;
+      // Re-read immediately before writing, including after a partial failed import.
+      const { fresh, dupes } = planLeadImport(buildRows(), await loadImportCandidates(), () =>
+        crypto.randomUUID(),
+      );
       if (fresh.length === 0 && (duplicateMode === "skip" || dupes.length === 0)) {
         throw new Error("Nothing new to import.");
       }
@@ -213,13 +205,18 @@ function ImportPage() {
             if (value) patch[key] = value;
           }
           if (Object.keys(patch).length === 0) continue;
-          const { error } = await supabase.from("leads").update(patch).eq("id", existingId);
-          if (error) throw error;
+          const { data, error } = await supabase
+            .from("leads")
+            .update(patch)
+            .eq("id", existingId)
+            .select("id")
+            .single();
+          if (error || !data) throw error ?? new Error("Lead update failed");
           updated += 1;
         }
       }
 
-      await supabase.from("import_batches").insert({
+      const { error: historyError } = await supabase.from("import_batches").insert({
         file_name: fileName,
         source,
         campaign: campaign || null,
@@ -228,6 +225,7 @@ function ImportPage() {
         skipped_count: rows.length - created - updated,
         created_by: me.id,
       });
+      if (historyError) toast.warning("Leads saved, but import history could not be saved.");
       return { created, updated, skipped: rows.length - created - updated };
     },
     onSuccess: (result) => {
@@ -242,7 +240,14 @@ function ImportPage() {
       queryClient.invalidateQueries({ queryKey: ["leads-dedupe"] });
       queryClient.invalidateQueries({ queryKey: ["import-batches"] });
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) =>
+      toast.error(
+        `Import stopped: ${error.message}. Some rows may already be saved; retry checks for duplicates again.`,
+      ),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["leads-dedupe"] });
+    },
   });
 
   return (

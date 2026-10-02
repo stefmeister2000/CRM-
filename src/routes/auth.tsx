@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
 import { supabase, isDatabaseConfigured } from "@/integrations/supabase/client";
 
+import { safeNext } from "@/lib/auth-redirect";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,12 +46,6 @@ export const Route = createFileRoute("/auth")({
       </main>
     ),
 });
-
-function safeNext(next: string | undefined) {
-  if (!next) return undefined;
-  if (!next.startsWith("/") || next.startsWith("//")) return undefined;
-  return next;
-}
 
 function GoogleMark() {
   return (
@@ -120,7 +116,7 @@ function AuthPage() {
           full_name:
             ((user.user_metadata?.["full_name"] as string | undefined) ?? "") || fullName || null,
         },
-        { onConflict: "id" },
+        { onConflict: "id", ignoreDuplicates: true },
       );
       const { data: roles } = await supabase
         .from("user_roles")

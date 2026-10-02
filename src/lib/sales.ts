@@ -287,3 +287,24 @@ export function todayIso(offsetDays = 0) {
   date.setDate(date.getDate() + offsetDays);
   return date.toISOString().slice(0, 10);
 }
+
+/** Give new rows real IDs so later duplicates in this file can update them. */
+export function planLeadImport<T extends Omit<DuplicateCandidate, "id">>(
+  rows: T[],
+  existing: DuplicateCandidate[],
+  createId: () => string,
+) {
+  const fresh: (T & { id: string })[] = [];
+  const dupes: { row: T; existingId: string }[] = [];
+  const seen = [...existing];
+  for (const row of rows) {
+    const hit = findDuplicate(row, seen);
+    if (hit) dupes.push({ row, existingId: hit.id });
+    else {
+      const item = { ...row, id: createId() };
+      fresh.push(item);
+      seen.push(item);
+    }
+  }
+  return { fresh, dupes };
+}
