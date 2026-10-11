@@ -1,4 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
+import { HealthfactorCategoryFilter } from "@/components/HealthfactorCategories";
+import {
+  matchesHealthfactorCategory,
+  type HealthfactorFilter,
+} from "@/lib/healthfactor-categories";
 import { startOfWeek, addWeeks, format } from "date-fns";
 import { ArrowUpRight, Users, TrendingUp, Target, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,9 +18,12 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 });
 
 function Dashboard() {
+  const { company } = Route.useRouteContext();
+  const [categoryFilter, setCategoryFilter] = useState<HealthfactorFilter>("all");
   const { language } = useLanguage();
   const nl = language === "nl";
-  const { data: leads = [], isPending, isError, refetch, isFetching } = usePipelineLeads();
+  const { data: allLeads = [], isPending, isError, refetch, isFetching } = usePipelineLeads();
+  const leads = allLeads.filter((lead) => matchesHealthfactorCategory(lead, categoryFilter));
   const now = new Date();
   const monday = startOfWeek(now, { weekStartsOn: 1 });
   const weeks = Array.from({ length: 8 }, (_, i) => {
@@ -106,6 +115,12 @@ function Dashboard() {
         </div>
       ) : (
         <>
+          <HealthfactorCategoryFilter
+            companyId={company.id}
+            leads={allLeads}
+            value={categoryFilter}
+            onChange={setCategoryFilter}
+          />
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {stats.map(({ title, value, note, icon: Icon }) => (
               <div key={title} className="rounded-2xl border bg-card p-5 shadow-sm">
