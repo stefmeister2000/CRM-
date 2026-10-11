@@ -139,9 +139,13 @@ function SettingsPage() {
   const addTeamMember = useServerFn(createTeamInvitation);
   const removeTeam = useServerFn(removeTeamMember);
   const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null);
-  const [invitation, setInvitation] = useState<{ id: string; email: string; url: string } | null>(
-    null,
-  );
+  const [invitation, setInvitation] = useState<{
+    id: string;
+    email: string;
+    url: string;
+    companyName: string;
+    delivery: { status: "sent" | "unconfirmed" };
+  } | null>(null);
   const remove = useMutation({
     mutationFn: (userId: string) => removeTeam({ data: { userId } }),
     onSuccess: (_, userId) => {
@@ -200,7 +204,15 @@ function SettingsPage() {
     onSuccess: (result) => {
       setInvitation(result);
       queryClient.invalidateQueries({ queryKey: ["company-invitations"] });
-      toast.success(nl ? "Uitnodigingslink klaar om te delen" : "Invitation link ready to share");
+      if (result.delivery.status === "sent") {
+        toast.success(nl ? "Uitnodiging verstuurd per e-mail" : "Invitation sent by email");
+      } else {
+        toast.error(
+          nl
+            ? "E-mailverzending niet bevestigd. Je kunt de link hieronder delen."
+            : "Email sending could not be confirmed. You can share the link below.",
+        );
+      }
       setNewMember({ fullName: "", email: "", team: "", role: "rep" });
       queryClient.invalidateQueries({ queryKey: ["profiles"] });
       queryClient.invalidateQueries({ queryKey: ["user-roles"] });
@@ -498,8 +510,8 @@ function SettingsPage() {
                 <CardContent className="space-y-3">
                   <p className="text-sm text-muted-foreground">
                     {nl
-                      ? "Maak een persoonlijke uitnodigingslink en stuur deze door via e-mail of een bericht. Nieuwe gebruikers kiezen een wachtwoord; bestaande gebruikers melden zich aan met hun eigen account. De uitnodiging geeft alleen toegang tot dit bedrijf. Er wordt niet automatisch een e-mail verstuurd."
-                      : "Create a personal invitation link to share by email or message. New users choose a password; existing users sign in with their own account. The invitation grants access only to this company. No email is sent automatically."}
+                      ? "Stuur een persoonlijke uitnodiging per e-mail. Nieuwe gebruikers kiezen een wachtwoord; bestaande gebruikers melden zich aan met hun eigen account. De uitnodiging geeft alleen toegang tot dit bedrijf."
+                      : "Send a personal invitation by email. New users choose a password; existing users sign in with their own account. The invitation grants access only to this company."}
                   </p>
 
                   <form
@@ -584,17 +596,32 @@ function SettingsPage() {
                       {addMember.isPending
                         ? nl
                           ? "Bezig…"
-                          : "Creating…"
+                          : "Sending…"
                         : nl
-                          ? "Uitnodigingslink maken"
-                          : "Create invitation link"}
+                          ? "Uitnodiging versturen"
+                          : "Send invitation"}
                     </Button>
                   </form>
                   {invitation && (
                     <div className="space-y-3 rounded-lg border bg-secondary/40 p-4" role="status">
                       <p className="text-sm font-medium">
-                        {nl ? "Uitnodiging voor" : "Invitation for"} {invitation.email}
+                        {invitation.delivery.status === "sent"
+                          ? nl
+                            ? "Uitnodiging per e-mail verstuurd naar"
+                            : "Invitation emailed to"
+                          : nl
+                            ? "Uitnodiging aangemaakt voor"
+                            : "Invitation created for"}{" "}
+                        {invitation.email}
                       </p>
+                      <p className="text-sm text-muted-foreground">{invitation.companyName}</p>
+                      {invitation.delivery.status === "unconfirmed" && (
+                        <p role="alert" className="text-sm text-destructive">
+                          {nl
+                            ? "De e-mailverzending kon niet worden bevestigd. Deel deze link zelf, of nodig de persoon later opnieuw uit. Een nieuwe uitnodiging vervangt de vorige."
+                            : "Email sending could not be confirmed. Share this link yourself, or invite this person again later. A new invitation replaces the previous one."}
+                        </p>
+                      )}
                       <Input
                         aria-label={nl ? "Uitnodigingslink" : "Invitation link"}
                         readOnly
@@ -620,8 +647,8 @@ function SettingsPage() {
                       </Button>
                       <p className="text-xs text-muted-foreground">
                         {nl
-                          ? "Deel deze persoonlijke link alleen met de ontvanger. Hij is één keer bruikbaar en vervalt volgens de ingestelde geldigheidsduur. Maak een nieuwe link als hij verlopen is. Bewaar de link voordat je deze pagina sluit."
-                          : "Share this personal link only with its recipient. It works once and expires according to the configured validity period. Generate a new link if it expires. Copy it before leaving this page."}
+                          ? "Je kunt de link ook zelf delen, alleen met deze ontvanger. Is de link verlopen? Nodig de persoon opnieuw uit."
+                          : "You can also share the link directly with this recipient. If it expires, invite the person again."}
                       </p>
                     </div>
                   )}
