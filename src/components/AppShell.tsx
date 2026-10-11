@@ -79,7 +79,7 @@ function Shell({ children }: { children: ReactNode }) {
         <CompanySwitcher />
         <nav
           aria-label={nl ? "Hoofdnavigatie" : "Main navigation"}
-          className="mt-10 flex flex-1 flex-col gap-2 overflow-y-auto"
+          className="mt-6 flex flex-1 flex-col gap-2 overflow-y-auto"
         >
           {NAV.map((item) => (
             <Link
@@ -134,11 +134,15 @@ function Shell({ children }: { children: ReactNode }) {
         className="flex items-center justify-between gap-3 border-b bg-card px-4 py-3 md:hidden"
         style={{ paddingTop: "max(.75rem, env(safe-area-inset-top))" }}
       >
-        <Link to="/dashboard" className="flex min-h-11 items-center gap-2 font-semibold">
+        <Link
+          to="/dashboard"
+          aria-label="Sales CRM"
+          className="flex min-h-11 shrink-0 items-center gap-2 font-semibold"
+        >
           <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             S
           </span>
-          Sales CRM
+          <span className="hidden sm:inline">Sales CRM</span>
         </Link>
         <CompanySwitcher compact />
         <Button
