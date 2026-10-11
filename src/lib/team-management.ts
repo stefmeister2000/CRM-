@@ -37,7 +37,7 @@ export async function inviteMember(
 ) {
   await assertTeamAdmin(client, actorId);
   const redirectTo = invitationUrl(publicUrl);
-  // Generates a one-use invitation; no email is sent and no shared password is created.
+  // Generate without Supabase sending: our company email includes both invitation tokens.
   const { data, error } = await admin.auth.admin.generateLink({
     type: "invite",
     email: input.email,

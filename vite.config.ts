@@ -7,7 +7,11 @@ import { nitro } from "nitro/vite";
 export default defineConfig(({ mode, command }) => {
   const env = loadEnv(mode, process.cwd(), "");
   for (const [key, value] of Object.entries(env)) {
-    if (key.startsWith("SUPABASE_") || key === "CRM_PUBLIC_URL") process.env[key] ??= value;
+    if (
+      key.startsWith("SUPABASE_") ||
+      ["CRM_PUBLIC_URL", "RESEND_API_KEY", "CRM_INVITATION_FROM"].includes(key)
+    )
+      process.env[key] ??= value;
   }
   return {
     plugins: [

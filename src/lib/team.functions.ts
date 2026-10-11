@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-import { inviteMember, removeMember } from "./team-management";
+import { removeMember } from "./team-management";
 
 const schema = z.object({
   email: z.string().trim().email(),
@@ -17,12 +17,20 @@ export const createTeamInvitation = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => schema.parse(data))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    return inviteMember(
+    const { createInvitationSender, inviteMemberByEmail } =
+      await import("./invitation-email.server");
+    const send = createInvitationSender({
+      apiKey: process.env["RESEND_API_KEY"],
+      from: process.env["CRM_INVITATION_FROM"],
+    });
+    return inviteMemberByEmail(
       context.supabase,
       supabaseAdmin,
       context.userId,
       data,
       process.env["CRM_PUBLIC_URL"],
+      context.companyId,
+      send,
     );
   });
 
