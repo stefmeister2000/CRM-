@@ -54,3 +54,9 @@ Website intake resolves the destination from a company-specific token and matche
 - `psql -v ON_ERROR_STOP=1 -d crm_company_test -f tests/company-workspaces.sql` against a **disposable local database named exactly `crm_company_test`**. This test recreates its schemas and verifies migration preservation, database-enforced isolation, forged and missing company context, parent/owner checks, member removal, storage visibility, invitation expiry/replacement/revocation, existing-user acceptance, and operator permissions. Never point it at production.
 
 Browser checks used a local synthetic API fixture for company creation, switching and invitation controls; those checks do not establish a successful production rollout or a real Supabase invitation lifecycle.
+
+## Personal website leads
+
+Apply `20261011112632_website_contact_intake.sql` before deploying support for personal leads. The existing intake endpoint accepts `contactType: "person"` with a stable UUID `submissionId` and an email or phone. Company authorization still uses the company-specific intake token. A server-only database RPC atomically matches the person, writes their activity, and records the submission result. Retrying the same ID returns the original response without adding another activity. People with the same name are kept separate; requests for different companies remain isolated. Existing B2B requests keep their current behavior.
+
+Database checks: run `tests/website-contact-intake.sql` only against the disposable local `crm_company_test` database, using the same prerequisites as the company-workspace checks.

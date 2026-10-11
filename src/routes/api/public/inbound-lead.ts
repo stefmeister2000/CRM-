@@ -22,6 +22,8 @@ const payloadSchema = z.object({
   linkedinUrl: z.string().trim().max(300).optional(),
   notes: z.string().trim().max(4000).optional(),
   campaign: z.string().trim().max(200).optional(),
+  contactType: z.literal("person").optional(),
+  submissionId: z.string().uuid().optional(),
 });
 
 function json(body: unknown, status = 200) {
@@ -70,6 +72,26 @@ export const Route = createFileRoute("/api/public/inbound-lead")({
           return json({ error: "Invalid payload", details: parsed.error.flatten() }, 400);
         }
         const lead = parsed.data;
+
+        if (lead.contactType === "person") {
+          if (!lead.submissionId || (!lead.email && !lead.phone)) {
+            return json(
+              { error: "Personal leads require a submissionId and email or phone." },
+              400,
+            );
+          }
+          const { data, error } = await supabaseAdmin.rpc("ingest_website_contact", {
+            _company: companyId,
+            _submission_id: lead.submissionId,
+            _payload: lead,
+          });
+          if (error)
+            return json(
+              { error: "Could not save the website contact. Retry this submission." },
+              503,
+            );
+          return json(data);
+        }
 
         const defaultCampaign = "Website inquiry";
 

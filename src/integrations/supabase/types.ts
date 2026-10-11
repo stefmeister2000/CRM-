@@ -334,6 +334,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      ingest_website_contact: {
+        Args: { _company: string; _submission_id: string; _payload: Json };
+        Returns: Json;
+      };
       current_company_id: { Args: never; Returns: string | null };
       list_my_companies: {
         Args: never;
