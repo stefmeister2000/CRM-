@@ -1,4 +1,12 @@
 import { WebsiteRequest } from "@/components/WebsiteRequest";
+import {
+  HealthfactorCategoryBadge,
+  HealthfactorCategoryFilter,
+} from "@/components/HealthfactorCategories";
+import {
+  matchesHealthfactorCategory,
+  type HealthfactorFilter,
+} from "@/lib/healthfactor-categories";
 import { usePipelineLeads } from "@/hooks/use-pipeline-leads";
 import { LeadTextField } from "@/components/LeadTextField";
 import { LeadDocuments } from "@/components/LeadDocuments";
@@ -102,6 +110,8 @@ const EMPTY_LEAD = {
 };
 
 function LeadsPage() {
+  const { company } = Route.useRouteContext();
+  const [categoryFilter, setCategoryFilter] = useState<HealthfactorFilter>("all");
   const queryClient = useQueryClient();
   const { data: me } = useCurrentUser();
   const [listMode, setListMode] = useState("active");
@@ -191,7 +201,7 @@ function LeadsPage() {
     onError: (error: Error) => toast.error(error.message),
   });
 
-  const filtered = useMemo(() => {
+  const matchingLeads = useMemo(() => {
     const term = search.toLowerCase().trim();
     return leads.filter((lead) => {
       if (listMode === "trash" ? !lead.deleted_at : Boolean(lead.deleted_at)) return false;
@@ -208,6 +218,9 @@ function LeadsPage() {
         .some((value) => String(value).toLowerCase().includes(term));
     });
   }, [leads, listMode, search, sourceFilter, stageFilter, ownerFilter, me?.id]);
+  const filtered = matchingLeads.filter((lead) =>
+    matchesHealthfactorCategory(lead, categoryFilter),
+  );
 
   // Every signed-in rep can update accounts: stage, value, notes and ownership.
   const canManageLead = (_lead: { owner_id: string | null; created_by: string | null }) =>
@@ -554,6 +567,13 @@ function LeadsPage() {
         </CardContent>
       </Card>
 
+      <HealthfactorCategoryFilter
+        companyId={company.id}
+        leads={matchingLeads}
+        value={categoryFilter}
+        onChange={setCategoryFilter}
+      />
+
       <div className="space-y-3 md:hidden">
         {filtered.map((lead) => (
           <article key={lead.id} className="rounded-xl border bg-card p-4">
@@ -566,6 +586,7 @@ function LeadsPage() {
             </button>
             <p className="break-words text-sm">{lead.contact_name ?? "—"}</p>
             <p className="break-all text-xs text-muted-foreground">{lead.email ?? ""}</p>
+            <HealthfactorCategoryBadge lead={lead} className="mt-2" />
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
               <Badge variant="outline">{labelFor(SOURCES, lead.source)}</Badge>
               <StageChip
@@ -624,6 +645,7 @@ function LeadsPage() {
                   <p className="text-xs text-muted-foreground">
                     {lead.city ?? "—"} · {priorityLabel(lead.priority)}
                   </p>
+                  <HealthfactorCategoryBadge lead={lead} className="mt-2" />
                 </TableCell>
                 <TableCell className="text-sm">
                   {lead.contact_name ?? "—"}
@@ -675,6 +697,7 @@ function LeadsPage() {
             <>
               <SheetHeader>
                 <SheetTitle className="text-2xl">{openLead.company}</SheetTitle>
+                <HealthfactorCategoryBadge lead={openLead} />
               </SheetHeader>
               <div className="pt-4">{actionsFor(openLead)}</div>
               <LeadDetail

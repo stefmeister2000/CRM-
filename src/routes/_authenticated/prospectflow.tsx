@@ -7,6 +7,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { LeadDocumentsButton } from "@/components/LeadDocuments";
 import { DealValueEditor } from "@/components/DealValueEditor";
+import {
+  HealthfactorCategoryBadge,
+  HealthfactorCategoryFilter,
+} from "@/components/HealthfactorCategories";
+import {
+  matchesHealthfactorCategory,
+  type HealthfactorFilter,
+} from "@/lib/healthfactor-categories";
 import { useLanguage } from "@/hooks/use-language";
 import { usePipelineLeads, pipelineQueryKey, type Lead } from "@/hooks/use-pipeline-leads";
 import { STAGES, formatMoney, type Stage } from "@/lib/sales";
@@ -27,6 +35,8 @@ const colors = ["#5276b4", "#7986cb", "#aa78bc", "#d29a47", "#de805e", "#40977f"
 const queryKey = pipelineQueryKey;
 
 function ProspectFlow() {
+  const { company } = Route.useRouteContext();
+  const [categoryFilter, setCategoryFilter] = useState<HealthfactorFilter>("all");
   const { language } = useLanguage();
   const nl = language === "nl";
   const client = useQueryClient();
@@ -76,10 +86,13 @@ function ProspectFlow() {
     saving.current = true;
     move.mutate({ id, stage });
   }
-  const filtered = leads.filter((l) =>
+  const matchingLeads = leads.filter((l) =>
     `${l.company} ${l.contact_name ?? ""} ${l.email ?? ""}`
       .toLowerCase()
       .includes(search.toLowerCase()),
+  );
+  const filtered = matchingLeads.filter((lead) =>
+    matchesHealthfactorCategory(lead, categoryFilter),
   );
   return (
     <div className="space-y-6">
@@ -107,6 +120,12 @@ function ProspectFlow() {
         </div>
       ) : (
         <section className="space-y-4" aria-label="Pipeline">
+          <HealthfactorCategoryFilter
+            companyId={company.id}
+            leads={matchingLeads}
+            value={categoryFilter}
+            onChange={setCategoryFilter}
+          />
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-2xl">{nl ? "Jouw prospectflow" : "Your prospect flow"}</h2>
@@ -192,6 +211,7 @@ function ProspectFlow() {
                         <p className="mt-1 text-xs text-muted-foreground">
                           {lead.contact_name || (nl ? "Geen contactpersoon" : "No contact")}
                         </p>
+                        <HealthfactorCategoryBadge lead={lead} className="mt-2" />
                         <DealValueEditor
                           id={lead.id}
                           company={lead.company}
