@@ -1,3 +1,4 @@
+import { getCompanyId } from "@/lib/company-context";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +10,8 @@ export function ConnectAI({ heading = "h1" }: { heading?: "h1" | "h2" }) {
   useEffect(() => setOrigin(window.location.origin), []);
   const Heading = heading;
   const local = !origin || !origin.startsWith("https://") || /localhost|127\.0\.0\.1/.test(origin);
-  const url = origin ? `${origin}/mcp` : "";
+  const url =
+    origin && getCompanyId() ? `${origin}/mcp?company=${encodeURIComponent(getCompanyId()!)}` : "";
   return (
     <div className="space-y-5">
       <div>

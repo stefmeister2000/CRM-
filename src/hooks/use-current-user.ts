@@ -30,8 +30,8 @@ export function useCurrentUser() {
         { onConflict: "id", ignoreDuplicates: true },
       );
       const [{ data: profile }, { data: roleRows }] = await Promise.all([
-        supabase.from("profiles").select("full_name, team, email").eq("id", user.id).maybeSingle(),
-        supabase.from("user_roles").select("role").eq("user_id", user.id),
+        supabase.from("profiles").select("full_name, email").eq("id", user.id).maybeSingle(),
+        supabase.from("user_roles").select("role, team").eq("user_id", user.id),
       ]);
 
       const roles = (roleRows ?? []).map((r) => r.role as Role);
@@ -39,7 +39,7 @@ export function useCurrentUser() {
         id: user.id,
         email: profile?.email ?? user.email ?? null,
         fullName: profile?.full_name ?? user.email ?? null,
-        team: profile?.team ?? null,
+        team: roleRows?.[0]?.team ?? null,
         roles,
         isManager: roles.includes("admin") || roles.includes("team_leader"),
       };

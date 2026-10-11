@@ -1,3 +1,4 @@
+import { resolveInboundCompany } from "@/lib/inbound-company";
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
@@ -45,19 +46,17 @@ export const Route = createFileRoute("/api/public/inbound-lead")({
         if (!token) return json({ error: "Invalid token" }, 401);
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-        const { data: setting, error: settingError } = await supabaseAdmin
-          .from("app_settings")
-          .select("value")
-          .eq("key", "inbound_lead_token")
-          .maybeSingle();
-
-        if (settingError)
+        let companyId: string | null;
+        try {
+          companyId = await resolveInboundCompany(
+            supabaseAdmin,
+            token,
+            process.env["INBOUND_LEAD_TOKEN"],
+          );
+        } catch {
           return json({ error: "Could not load website connection settings." }, 503);
-
-        const expected = setting?.value || process.env["INBOUND_LEAD_TOKEN"];
-        if (!expected) return json({ error: "Inbound endpoint is not configured yet." }, 503);
-
-        if (token !== expected) return json({ error: "Invalid token" }, 401);
+        }
+        if (!companyId) return json({ error: "Invalid token" }, 401);
 
         let raw: unknown;
         try {
@@ -74,13 +73,13 @@ export const Route = createFileRoute("/api/public/inbound-lead")({
 
         const defaultCampaign = "Website inquiry";
 
-        // Match accounts across the shared sales workspace.
+        // Match accounts only inside the company identified by this connection token.
         let existingId: string | null = null;
         if (lead.email) {
           const { data, error } = await supabaseAdmin
             .from("leads")
             .select("id")
-
+            .eq("company_id", companyId)
             .ilike("email", exactPattern(lead.email))
             .limit(1);
           if (error) return json({ error: "Could not look up the contact." }, 500);
@@ -90,7 +89,7 @@ export const Route = createFileRoute("/api/public/inbound-lead")({
           const { data, error } = await supabaseAdmin
             .from("leads")
             .select("id")
-
+            .eq("company_id", companyId)
             .ilike("company", exactPattern(lead.company))
             .limit(1);
           if (error) return json({ error: "Could not look up the company." }, 500);
@@ -105,6 +104,7 @@ export const Route = createFileRoute("/api/public/inbound-lead")({
             .from("leads")
             .select("notes")
             .eq("id", existingId)
+            .eq("company_id", companyId)
             .single();
           if (currentError) return json({ error: "Could not load the matched lead." }, 500);
 
@@ -120,11 +120,13 @@ export const Route = createFileRoute("/api/public/inbound-lead")({
               ...(lead.phone ? { phone: lead.phone } : {}),
               ...(lead.email ? { email: lead.email } : {}),
             })
-            .eq("id", existingId);
+            .eq("id", existingId)
+            .eq("company_id", companyId);
           if (error) return json({ error: error.message }, 500);
 
           const { error: activityError } = await supabaseAdmin.from("activities").insert({
             lead_id: existingId,
+            company_id: companyId,
             channel: "note",
             direction: "inbound",
             body: lead.notes ?? `Nieuwe B2B-aanvraag via website.`,
@@ -138,6 +140,7 @@ export const Route = createFileRoute("/api/public/inbound-lead")({
           .from("leads")
           .insert({
             company: lead.company,
+            company_id: companyId,
             source: "website",
             stage: "new",
 
@@ -160,6 +163,7 @@ export const Route = createFileRoute("/api/public/inbound-lead")({
 
         const { error: activityError } = await supabaseAdmin.from("activities").insert({
           lead_id: created.id,
+          company_id: companyId,
           channel: "note",
           direction: "inbound",
           body: lead.notes ?? `Nieuwe B2B-aanvraag via website.`,

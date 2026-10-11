@@ -13,6 +13,7 @@ export async function finishInvitation(
   password: string,
   confirmation: string,
   progress: InvitationProgress,
+  companyToken?: string,
 ) {
   if (!token) throw new Error("Open de volledige uitnodigingslink van je beheerder.");
   if (password.length < 8 || password !== confirmation) {
@@ -49,10 +50,11 @@ export async function finishInvitation(
       "Je aanmeldsessie is gewijzigd of verlopen. Meld je aan met je eigen account of vraag je beheerder om hulp.",
     );
   }
-  const { data: roles, error: roleError } = await client
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", userId);
+  if (companyToken) {
+    const { error } = await client.rpc("accept_company_invitation", { _token: companyToken });
+    if (error) throw new Error(error.message);
+  }
+  const { data: roles, error: roleError } = await client.rpc("list_my_companies");
   if (roleError) throw new Error("Je toegang kon niet worden gecontroleerd. Probeer opnieuw.");
   if (!roles?.length)
     throw new Error(

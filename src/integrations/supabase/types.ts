@@ -8,8 +8,34 @@ export type Database = {
   };
   public: {
     Tables: {
+      companies: {
+        Row: { id: string; name: string; created_by: string | null; created_at: string };
+        Insert: { id?: string; name: string; created_by?: string | null; created_at?: string };
+        Update: { name?: string };
+        Relationships: [];
+      };
+      company_invitations: {
+        Row: {
+          id: string;
+          company_id: string;
+          email: string;
+          full_name: string;
+          team: string;
+          role: Database["public"]["Enums"]["app_role"];
+          invited_by: string;
+          created_at: string;
+          expires_at: string;
+          revoked_at: string | null;
+          accepted_at: string | null;
+          accepted_by: string | null;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       account_requests: {
         Row: {
+          company_id: string;
           created_at: string;
           decided_at: string | null;
           decided_by: string | null;
@@ -21,6 +47,7 @@ export type Database = {
           user_id: string;
         };
         Insert: {
+          company_id?: string;
           created_at?: string;
           decided_at?: string | null;
           decided_by?: string | null;
@@ -32,6 +59,7 @@ export type Database = {
           user_id: string;
         };
         Update: {
+          company_id?: string;
           created_at?: string;
           decided_at?: string | null;
           decided_by?: string | null;
@@ -46,6 +74,7 @@ export type Database = {
       };
       activities: {
         Row: {
+          company_id: string;
           body: string | null;
           channel: Database["public"]["Enums"]["activity_channel"];
           created_at: string;
@@ -57,6 +86,7 @@ export type Database = {
           user_id: string | null;
         };
         Insert: {
+          company_id?: string;
           body?: string | null;
           channel?: Database["public"]["Enums"]["activity_channel"];
           created_at?: string;
@@ -68,6 +98,7 @@ export type Database = {
           user_id?: string | null;
         };
         Update: {
+          company_id?: string;
           body?: string | null;
           channel?: Database["public"]["Enums"]["activity_channel"];
           created_at?: string;
@@ -90,18 +121,21 @@ export type Database = {
       };
       app_settings: {
         Row: {
+          company_id: string;
           key: string;
           updated_at: string;
           updated_by: string | null;
           value: string;
         };
         Insert: {
+          company_id?: string;
           key: string;
           updated_at?: string;
           updated_by?: string | null;
           value: string;
         };
         Update: {
+          company_id?: string;
           key?: string;
           updated_at?: string;
           updated_by?: string | null;
@@ -111,6 +145,7 @@ export type Database = {
       };
       import_batches: {
         Row: {
+          company_id: string;
           campaign: string | null;
           created_at: string;
           created_by: string | null;
@@ -122,6 +157,7 @@ export type Database = {
           source: Database["public"]["Enums"]["lead_source"];
         };
         Insert: {
+          company_id?: string;
           campaign?: string | null;
           created_at?: string;
           created_by?: string | null;
@@ -133,6 +169,7 @@ export type Database = {
           source?: Database["public"]["Enums"]["lead_source"];
         };
         Update: {
+          company_id?: string;
           campaign?: string | null;
           created_at?: string;
           created_by?: string | null;
@@ -147,6 +184,7 @@ export type Database = {
       };
       leads: {
         Row: {
+          company_id: string;
           deleted_at: string | null;
           flagged: boolean;
           campaign: string | null;
@@ -176,6 +214,7 @@ export type Database = {
           website: string | null;
         };
         Insert: {
+          company_id?: string;
           deleted_at?: string | null;
           flagged?: boolean;
           campaign?: string | null;
@@ -205,6 +244,7 @@ export type Database = {
           website?: string | null;
         };
         Update: {
+          company_id?: string;
           deleted_at?: string | null;
           flagged?: boolean;
           campaign?: string | null;
@@ -264,18 +304,24 @@ export type Database = {
       };
       user_roles: {
         Row: {
+          team: string;
+          company_id: string;
           created_at: string;
           id: string;
           role: Database["public"]["Enums"]["app_role"];
           user_id: string;
         };
         Insert: {
+          team?: string;
+          company_id?: string;
           created_at?: string;
           id?: string;
           role: Database["public"]["Enums"]["app_role"];
           user_id: string;
         };
         Update: {
+          team?: string;
+          company_id?: string;
           created_at?: string;
           id?: string;
           role?: Database["public"]["Enums"]["app_role"];
@@ -288,6 +334,36 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      current_company_id: { Args: never; Returns: string | null };
+      list_my_companies: {
+        Args: never;
+        Returns: {
+          id: string;
+          name: string;
+          role: Database["public"]["Enums"]["app_role"];
+          platform_owner: boolean;
+        }[];
+      };
+      create_crm_company: { Args: { _name: string }; Returns: string };
+      invite_company_member: {
+        Args: {
+          _email: string;
+          _full_name: string;
+          _team: string;
+          _role: Database["public"]["Enums"]["app_role"];
+        };
+        Returns: Json;
+      };
+      accept_company_invitation: { Args: { _token: string }; Returns: string };
+      revoke_company_invitation: { Args: { _id: string }; Returns: undefined };
+      set_company_member_role: {
+        Args: { _user_id: string; _role: Database["public"]["Enums"]["app_role"] };
+        Returns: undefined;
+      };
+      decide_company_request: {
+        Args: { _request_id: string; _user_id: string; _approve: boolean };
+        Returns: undefined;
+      };
       remove_crm_member: { Args: { _user_id: string }; Returns: undefined };
       configure_crm_invitation: {
         Args: {

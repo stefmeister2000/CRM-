@@ -118,10 +118,8 @@ function AuthPage() {
         },
         { onConflict: "id", ignoreDuplicates: true },
       );
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id);
+      const { data: roles, error: companyError } = await supabase.rpc("list_my_companies");
+      if (companyError) throw new Error(companyError.message);
       if (!roles || roles.length === 0) {
         const { data: existingRequest } = await supabase
           .from("account_requests")

@@ -1,3 +1,5 @@
+import { CompanySwitcher } from "@/components/CompanyManagement";
+import { resetCompanyContext } from "@/lib/company-context";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BarChart3, Users, LogOut, Settings, FileText, GitBranch } from "lucide-react";
@@ -52,6 +54,7 @@ function Shell({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    resetCompanyContext();
     queryClient.clear();
     navigate({ to: "/auth" });
   };
@@ -73,6 +76,7 @@ function Shell({ children }: { children: ReactNode }) {
             </span>
           </span>
         </Link>
+        <CompanySwitcher />
         <nav
           aria-label={nl ? "Hoofdnavigatie" : "Main navigation"}
           className="mt-10 flex flex-1 flex-col gap-2 overflow-y-auto"
@@ -136,6 +140,7 @@ function Shell({ children }: { children: ReactNode }) {
           </span>
           Sales CRM
         </Link>
+        <CompanySwitcher compact />
         <Button
           variant="ghost"
           size="icon"

@@ -43,36 +43,38 @@ export async function inviteMember(
     email: input.email,
     options: { redirectTo, data: { full_name: input.fullName } },
   });
-  if (error) {
-    if (
-      error.code === "email_exists" ||
+  const existingAccount =
+    error &&
+    (error.code === "email_exists" ||
       error.code === "user_already_exists" ||
-      /already.*registered|already.*exists/i.test(error.message)
-    ) {
-      throw new Error(
-        "Dit e-mailadres heeft al een account. Laat deze persoon aanmelden met het bestaande wachtwoord. Een uitnodiging overschrijft geen bestaand account.",
-      );
-    }
+      /already.*registered|already.*exists/i.test(error.message));
+  if (error && !existingAccount) {
     if (error.status === 429)
       throw new Error("Er zijn te veel aanvragen tegelijk. Wacht even en probeer opnieuw.");
     throw new Error(error.message);
   }
-  if (!data.user?.id || !data.properties?.hashed_token)
+  if (!existingAccount && (!data.user?.id || !data.properties?.hashed_token))
     throw new Error("Uitnodiging kon niet worden aangemaakt.");
-  const { error: setupError } = await client.rpc("configure_crm_invitation", {
-    _user_id: data.user.id,
+  const { data: invitation, error: setupError } = await client.rpc("invite_company_member", {
+    _email: input.email,
     _full_name: input.fullName,
     _team: input.team || "",
     _role: input.role,
   });
-  // A failure leaves an unapproved Auth account; do not delete a potentially existing account.
-  // Never return a login token until the complete profile and role transaction succeeds.
   if (setupError) throw new Error(setupError.message);
-  return {
-    id: data.user.id,
-    email: input.email,
-    url: invitationUrl(publicUrl, data.properties.hashed_token),
-  };
+  if (
+    !invitation ||
+    typeof invitation !== "object" ||
+    Array.isArray(invitation) ||
+    typeof invitation["id"] !== "string" ||
+    typeof invitation["token"] !== "string"
+  )
+    throw new Error("Uitnodiging kon niet worden aangemaakt.");
+  const url = new URL(invitationUrl(publicUrl));
+  const fragment = new URLSearchParams({ company_invite: invitation["token"] });
+  if (!existingAccount) fragment.set("token_hash", data.properties!.hashed_token);
+  url.hash = fragment.toString();
+  return { id: invitation["id"], email: input.email, url: url.toString() };
 }
 
 export async function removeMember(

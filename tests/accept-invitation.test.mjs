@@ -29,9 +29,10 @@ function fixture() {
         return { error: state.passwordError };
       },
     },
-    from: () => ({
-      select: () => ({ eq: async () => ({ data: state.roles, error: state.roleError }) }),
-    }),
+    rpc: async (name) =>
+      name === "list_my_companies"
+        ? { data: state.roles, error: state.roleError }
+        : { data: "company-2", error: state.joinError ?? null },
   };
   return { calls, values, progress, state, client };
 }
@@ -116,5 +117,22 @@ test("temporary role lookup failure can be retried without consuming token twice
   await assert.rejects(run(f), /gecontroleerd/);
   f.state.roleError = null;
   await run(f);
+  assert.equal(f.calls.filter((c) => c[0] === "verify").length, 1);
+});
+
+test("company invitations provision membership before access check and preserve retry state on failure", async () => {
+  const f = fixture();
+  f.state.joinError = { message: "Invitation expired" };
+  await assert.rejects(
+    finishInvitation(f.client, "test-token", password, password, f.progress, "company-token"),
+    /expired/,
+  );
+  assert.equal(f.calls.filter((c) => c[0] === "password").length, 0);
+  assert.equal(f.values.size, 1);
+  f.state.joinError = null;
+  assert.equal(
+    await finishInvitation(f.client, "test-token", password, password, f.progress, "company-token"),
+    "recipient",
+  );
   assert.equal(f.calls.filter((c) => c[0] === "verify").length, 1);
 });

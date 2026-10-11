@@ -34,10 +34,7 @@ function PendingPage() {
         navigate({ to: "/auth", replace: true });
         return;
       }
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", auth.user.id);
+      const { data: roles } = await supabase.rpc("list_my_companies");
       if (roles && roles.length > 0) {
         navigate({ to: "/dashboard", replace: true });
         return;

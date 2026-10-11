@@ -3,6 +3,7 @@ import type { CallToolResult, ToolAnnotations } from "@modelcontextprotocol/sdk/
 export type ToolContext = {
   getToken: () => string;
   getUserId: () => string;
+  getCompanyId?: () => string;
   isAuthenticated: () => boolean;
 };
 export function defineTool<S extends z.ZodRawShape>(tool: {
