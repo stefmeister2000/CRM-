@@ -26,3 +26,31 @@ Under **Settings → Team & ownership**, administrators can create a personal in
 **Remove member** revokes every CRM role, marks their access request declined, and unassigns their leads in one database transaction. Existing sessions lose access through RLS. Auth identity, profile, documents, and activity history remain intact; this is removal from the CRM team, not deletion of historical data or the Supabase identity. Administrators cannot remove themselves. Accounts without roles are not listed as eligible lead owners.
 
 Validation: `npm run test:integrations`, `npx tsc --noEmit`, `npm run build`. Database regressions can be run with `psql -v ON_ERROR_STOP=1 -f tests/team-management.sql` **only against a new disposable local PostgreSQL database**; the script builds a mock Auth schema, loads the bootstrap and migration, and checks direct RPC permissions, access revocation, and history preservation. The hosted invitation lifecycle was verified with temporary accounts on 2026-10-02, including password login, one-use tokens and access revocation.
+
+## Multiple companies
+
+The software operator can create companies under **Settings → Companies**. The sidebar company selector switches between the companies the signed-in person belongs to. Each company has its own leads, activities, imports, member roles, invitations and website token. Company administrators manage only their company; they cannot create other companies or promote themselves to software operator. Removing a member revokes only that company's access and preserves their other memberships and history.
+
+Create a company, then use **Invite a team member** in its settings. Share the generated personal link with the intended recipient. New users set a password; existing users sign in with their existing account. Company invitations expire after seven days (the new-account authentication token can expire earlier according to Supabase settings). Creating another invitation for the same email in that company revokes the previous pending link. Pending invitations can also be revoked in Settings. No email is sent automatically.
+
+### Coordinated production rollout
+
+1. Take and verify a database backup. Review the current `admin` members: the migration preserves these existing trusted administrators as software operators. Future company administrators do not receive that privilege.
+2. Apply `supabase/migrations/20261011094705_company_workspaces.sql` to the populated CRM database once. It requires the existing team-management and lead-document migrations. Existing records, roles, history, documents and settings remain attached to **Verkoop Studio** (`00000000-0000-4000-8000-000000000001`). The fresh bootstrap must never run against production.
+3. Deploy this application revision immediately after the migration, before creating another company. Older clients remain compatible with basic single-company reads, but the former global invitation and role-write paths are deliberately disabled. Do not roll back to the old application after onboarding another company; use a forward fix or a coordinated restore.
+4. Verify existing Verkoop leads, create a test company and invite a controlled test account. Confirm both companies remain isolated before inviting real client teams. Check website intake and document access as well.
+
+For a new empty installation, establish the first administrator with the existing bootstrap instructions **before** applying the company migration. If no administrator exists at migration time, no software operator is created; a database administrator must explicitly assign the verified owner in `crm_private.platform_admins` and their Verkoop membership. There is no public self-promotion endpoint.
+
+The browser sends the selected company on every database and server-function request; PostgreSQL validates current membership rather than trusting the header. Company changes reload the app to discard cached records and drafts. Missing company context is accepted only for an account with exactly one company. Database policies protect all application tables, the legacy contacts table when present, and storage access through the linked lead. Existing attachments retain their uploader-only visibility.
+
+Website intake resolves the destination from a company-specific token and matches duplicate contacts only in that company. The legacy `INBOUND_LEAD_TOKEN` environment fallback is restricted to Verkoop Studio and disabled when its token is rotated. AI connections use the selected company's URL from Settings, `/mcp?company=<id>`. Existing generic `/mcp` connections must be updated for users who now belong to multiple companies.
+
+### Verification
+
+- `npm run test:integrations`
+- `npx tsc --noEmit`
+- `npm run build`
+- `psql -v ON_ERROR_STOP=1 -d crm_company_test -f tests/company-workspaces.sql` against a **disposable local database named exactly `crm_company_test`**. This test recreates its schemas and verifies migration preservation, database-enforced isolation, forged and missing company context, parent/owner checks, member removal, storage visibility, invitation expiry/replacement/revocation, existing-user acceptance, and operator permissions. Never point it at production.
+
+Browser checks used a local synthetic API fixture for company creation, switching and invitation controls; those checks do not establish a successful production rollout or a real Supabase invitation lifecycle.

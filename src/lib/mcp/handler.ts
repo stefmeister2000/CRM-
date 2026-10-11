@@ -40,9 +40,19 @@ export async function handleMcp(request: Request) {
   const token = request.headers.get("authorization")?.match(/^Bearer (\S+)$/i)?.[1];
   if (!token) return unauthorized();
   let userId = "";
+  let companyId =
+    request.headers.get("x-crm-company-id") ??
+    new URL(request.url).searchParams.get("company") ??
+    "";
+  if (
+    companyId &&
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(companyId)
+  )
+    return Response.json({ error: "Invalid company" }, { status: 400 });
   const ctx: ToolContext = {
     getToken: () => token,
     getUserId: () => userId,
+    getCompanyId: () => companyId,
     isAuthenticated: () => !!userId,
   };
   try {
@@ -50,6 +60,15 @@ export async function handleMcp(request: Request) {
     const { data, error } = await db.auth.getUser(token);
     if (error || !data.user) return unauthorized();
     userId = data.user.id;
+    const scope = await db.rpc("current_company_id");
+    if (scope.error)
+      return Response.json({ error: "Could not verify company access" }, { status: 503 });
+    if (!scope.data)
+      return Response.json(
+        { error: "Select a company using its connection URL from CRM Settings." },
+        { status: 403 },
+      );
+    companyId = scope.data;
     const roles = await db.from("user_roles").select("role").eq("user_id", userId).limit(1);
     if (roles.error)
       return Response.json({ error: "Could not verify CRM access" }, { status: 503 });

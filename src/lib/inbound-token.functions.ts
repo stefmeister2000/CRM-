@@ -1,3 +1,4 @@
+import { VERKOOP_COMPANY_ID } from "@/lib/company-context";
 import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -34,8 +35,7 @@ export const getInboundToken = createServerFn({ method: "POST" })
         serverConfigured: false,
       };
     }
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await context.supabase
       .from("app_settings")
       .select("value, updated_at")
       .eq("key", SETTING_KEY)
@@ -49,7 +49,8 @@ export const getInboundToken = createServerFn({ method: "POST" })
         serverConfigured: true,
       };
     }
-    const envToken = process.env["INBOUND_LEAD_TOKEN"];
+    const envToken =
+      context.companyId === VERKOOP_COMPANY_ID ? process.env["INBOUND_LEAD_TOKEN"] : undefined;
     return {
       token: null as string | null,
       updatedAt: null as string | null,
@@ -62,16 +63,16 @@ export const rotateInboundToken = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const token = newToken();
-    const { error } = await supabaseAdmin.from("app_settings").upsert(
+    const { error } = await context.supabase.from("app_settings").upsert(
       {
         key: SETTING_KEY,
+        company_id: context.companyId,
         value: token,
         updated_at: new Date().toISOString(),
         updated_by: context.userId,
       },
-      { onConflict: "key" },
+      { onConflict: "company_id,key" },
     );
     if (error) throw new Error(error.message);
     return { token };

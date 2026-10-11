@@ -38,3 +38,6 @@ dist-ssr
 
 # Former editor metadata is not part of the independent CRM.
 .lovable/
+
+# Supabase CLI local state
+supabase/.temp/

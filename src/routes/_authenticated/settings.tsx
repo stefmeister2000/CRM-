@@ -1,3 +1,4 @@
+import { CompanyManagement, PendingCompanyInvitations } from "@/components/CompanyManagement";
 import { usePipelineLeads } from "@/hooks/use-pipeline-leads";
 import { useLanguage } from "@/hooks/use-language";
 import { createFileRoute } from "@tanstack/react-router";
@@ -92,7 +93,7 @@ function SettingsPage() {
   const { data: profiles = [] } = useQuery({
     queryKey: ["profiles"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("id, full_name, email, team");
+      const { data, error } = await supabase.from("profiles").select("id, full_name, email");
       if (error) throw error;
       return data;
     },
@@ -101,7 +102,7 @@ function SettingsPage() {
   const { data: roleRows = [] } = useQuery({
     queryKey: ["user-roles"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("user_roles").select("user_id, role");
+      const { data, error } = await supabase.from("user_roles").select("user_id, role, team");
       if (error) throw error;
       return data;
     },
@@ -121,14 +122,11 @@ function SettingsPage() {
   const setRole = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: Role }) => {
       if (userId === me?.id) throw new Error("Je kunt je eigen rol niet wijzigen.");
-      // A single UPDATE is atomic: a failed change preserves the existing role.
-      const { data, error } = await supabase
-        .from("user_roles")
-        .update({ role })
-        .eq("user_id", userId)
-        .select("id");
+      const { error } = await supabase.rpc("set_company_member_role", {
+        _user_id: userId,
+        _role: role,
+      });
       if (error) throw error;
-      if (!data?.length) throw new Error("Rol niet gewijzigd. Vernieuw het teamoverzicht.");
     },
     onSuccess: () => {
       toast.success("Role updated");
@@ -150,7 +148,7 @@ function SettingsPage() {
       setRemoving(null);
       if (invitation?.id === userId) setInvitation(null);
       toast.success(
-        nl ? "Persoon verwijderd. CRM-toegang ingetrokken." : "Member removed. CRM access revoked.",
+        nl ? "Persoon verwijderd uit dit bedrijf." : "Member removed from this company.",
       );
       queryClient.invalidateQueries();
     },
@@ -201,6 +199,7 @@ function SettingsPage() {
     },
     onSuccess: (result) => {
       setInvitation(result);
+      queryClient.invalidateQueries({ queryKey: ["company-invitations"] });
       toast.success(nl ? "Uitnodigingslink klaar om te delen" : "Invitation link ready to share");
       setNewMember({ fullName: "", email: "", team: "", role: "rep" });
       queryClient.invalidateQueries({ queryKey: ["profiles"] });
@@ -245,6 +244,7 @@ function SettingsPage() {
           const open = owned.filter((lead) => OPEN_STAGES.includes(lead.stage as Stage));
           return {
             ...profile,
+            team: roleRows.find((r) => r.user_id === profile.id)?.team ?? "",
             role:
               (roleRows.find((r) => r.user_id === profile.id)?.role as Role | undefined) ?? "rep",
             owned: owned.length,
@@ -282,8 +282,8 @@ function SettingsPage() {
             <AlertDialogTitle>{nl ? "Persoon verwijderen?" : "Remove member?"}</AlertDialogTitle>
             <AlertDialogDescription>
               {nl
-                ? `${removing?.name ?? "Deze persoon"} verliest de CRM-toegang. Leads en contacthistoriek blijven bewaard. Hun leads worden niet-toegewezen; je kunt ze daarna aan iemand anders toewijzen.`
-                : `${removing?.name ?? "This person"} will lose CRM access. Leads and contact history are kept. Their leads become unassigned so you can reassign them.`}
+                ? `${removing?.name ?? "Deze persoon"} verliest de toegang tot dit bedrijf. Leads en contacthistoriek blijven bewaard. Hun leads worden niet-toegewezen; je kunt ze daarna aan iemand anders toewijzen.`
+                : `${removing?.name ?? "This person"} will lose access to this company. Leads and contact history are kept. Their leads become unassigned so you can reassign them.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -310,6 +310,9 @@ function SettingsPage() {
             : "Connect your own ChatGPT account to add and update leads with your existing access."}
         </p>
       </div>
+
+      <CompanyManagement />
+      {isAdmin && <PendingCompanyInvitations />}
 
       <section
         aria-label={nl ? "Taalvoorkeur" : "Language preference"}
@@ -495,8 +498,8 @@ function SettingsPage() {
                 <CardContent className="space-y-3">
                   <p className="text-sm text-muted-foreground">
                     {nl
-                      ? "Maak een persoonlijke uitnodigingslink en stuur deze door via e-mail of een bericht. De ontvanger kiest zelf een wachtwoord en krijgt de geselecteerde rol. Er wordt niet automatisch een e-mail verstuurd."
-                      : "Create a personal invitation link to share by email or message. The recipient chooses their own password and receives the selected role. No email is sent automatically."}
+                      ? "Maak een persoonlijke uitnodigingslink en stuur deze door via e-mail of een bericht. Nieuwe gebruikers kiezen een wachtwoord; bestaande gebruikers melden zich aan met hun eigen account. De uitnodiging geeft alleen toegang tot dit bedrijf. Er wordt niet automatisch een e-mail verstuurd."
+                      : "Create a personal invitation link to share by email or message. New users choose a password; existing users sign in with their own account. The invitation grants access only to this company. No email is sent automatically."}
                   </p>
 
                   <form
