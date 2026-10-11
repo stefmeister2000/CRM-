@@ -6,12 +6,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getInboundToken, rotateInboundToken } from "@/lib/inbound-token.functions";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useCompanies } from "@/components/CompanyManagement";
+import { getCompanyId } from "@/lib/company-context";
 
 export function InboundWebsite() {
   const [origin, setOrigin] = useState("");
   useEffect(() => setOrigin(window.location.origin), []);
   const queryClient = useQueryClient();
   const { data: me } = useCurrentUser();
+  const { data: companies = [] } = useCompanies();
+  const companyName = companies.find((company) => company.id === getCompanyId())?.name;
   const isAdmin = me?.roles.includes("admin") ?? false;
 
   const fetchToken = useServerFn(getInboundToken);
@@ -54,7 +58,7 @@ x-inbound-token: ${token ?? "<jullie token>"}`;
   "company": "Example Company",
   "contactName": "Alex Morgan",
   "email": "alex@example.com",
-  "campaign": "stefkeppens.com",
+  "campaign": "Website contactformulier",
   "notes": "Interested in a product demo"
 }`;
 
@@ -66,13 +70,17 @@ x-inbound-token: ${token ?? "<jullie token>"}`;
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="font-display text-2xl">Websiteleads · stefkeppens.com</h2>
-        <p className="my-2 text-sm font-medium">
-          Voorbereid voor later · website nog niet aangesloten
+        <h2 className="font-display text-2xl">
+          Websiteleads{companyName ? ` · ${companyName}` : ""}
+        </h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Koppel de website van {companyName ?? "dit bedrijf"} met een eigen token. Aanvragen via
+          dit token komen uitsluitend in deze werkruimte terecht. Elk bedrijf gebruikt zijn eigen
+          token.
         </p>
-        <p className="text-sm text-muted-foreground">
-          Websiteaanvragen komen hier binnen als nieuwe leads. Bestaat het bedrijf of e-mailadres
-          al, dan wordt de aanvraag aan het bestaande account toegevoegd.
+        <p className="mt-2 text-sm text-muted-foreground">
+          Bestaat het bedrijf of e-mailadres al in deze werkruimte, dan wordt de aanvraag aan het
+          bestaande account toegevoegd.
         </p>
       </div>
 
@@ -88,8 +96,8 @@ x-inbound-token: ${token ?? "<jullie token>"}`;
             </Button>
           </div>
           <p className="text-sm text-muted-foreground">
-            Verstuur het formulier vanuit de server van stefkeppens.com naar het publieke
-            HTTPS-adres van deze CRM. Het token hoort in de header
+            Verstuur het formulier vanuit de server van je website naar het publieke HTTPS-adres van
+            deze CRM. Het token hoort in de header
             <code className="mx-1 rounded bg-secondary/60 px-1">x-inbound-token</code>; aanvragen
             zonder geldig token worden geweigerd.
           </p>
@@ -166,8 +174,8 @@ x-inbound-token: ${token ?? "<jullie token>"}`;
             Kopieer voorbeeld
           </Button>
           <p className="text-xs text-muted-foreground">
-            Alleen <strong>company</strong> is verplicht. Alle aanvragen komen in dezelfde
-            salesworkspace.
+            Alleen <strong>company</strong> is verplicht: dit is de bedrijfsnaam van de lead. Het
+            token bepaalt in welke werkruimte de aanvraag terechtkomt.
           </p>
         </CardContent>
       </Card>
