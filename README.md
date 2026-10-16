@@ -60,3 +60,15 @@ Browser checks used a local synthetic API fixture for company creation, switchin
 Apply `20261011112632_website_contact_intake.sql` before deploying support for personal leads. The existing intake endpoint accepts `contactType: "person"` with a stable UUID `submissionId` and an email or phone. Company authorization still uses the company-specific intake token. A server-only database RPC atomically matches the person, writes their activity, and records the submission result. Retrying the same ID returns the original response without adding another activity. People with the same name are kept separate; requests for different companies remain isolated. Existing B2B requests keep their current behavior.
 
 Database checks: run `tests/website-contact-intake.sql` only against the disposable local `crm_company_test` database, using the same prerequisites as the company-workspace checks.
+
+## GA4 meetings from the CRM
+
+Apply `supabase/migrations/20261016072038_ga4_crm_meetings.sql` before deploying. Website intake accepts an optional `ga4` object with the Google-generated `clientId` and `sessionId`, stores it through a service-only RPC, and keeps it out of contact notes and browser-readable tables. Intake remains successful if optional analytics storage is unavailable.
+
+A committed transition of an attributed website lead into `meeting` queues `meeting_booked`, once per lead. This covers the board, lead editor and MCP because the database observes the stage update. Unattributed/imported leads and old meetings are not backfilled. The event contains the original browser client ID, a recent session ID when available, and the fixed method `sales_crm`; it never contains contact details, notes, company names or CRM record IDs. Google may limit campaign attribution for meetings long after the original visit.
+
+Delivery uses a private outbox and the `crm-ga4-meetings` database job every minute. Configure a company-specific row in `crm_private.ga4_connections`, store its Measurement Protocol API secret in Supabase Vault under the referenced `secret_name`, validate the payload with Google's `/debug/mp/collect`, and only then set `enabled=true`. The Verkoop target is `G-VRKJP8K3SD`; other companies must not use this connection. Keep all secrets outside source control and browser code.
+
+`submitted` means Google returned HTTP 2xx, not proof that the event appeared in reports. HTTP 429/5xx responses receive up to five attempts; ambiguous network outcomes are held as `uncertain` for manual review instead of blindly retrying. Pending events expire before Google's 72-hour backdating limit. A disabled/missing-secret connection does not send events. Inspect status counts in `crm_private.ga4_outbox` and the cron run history when diagnosing delivery; never print Vault secrets or request URLs containing them.
+
+Validation: `npm run test:integrations`, `tsc --noEmit`, production build, and `tests/ga4-database.sql` (transaction-only rollback test, no external requests). The private tables intentionally have deny-by-default RLS and no client grants. Mark `generate_lead` and `meeting_booked` as key events in GA4 for conversion reporting.

@@ -1,3 +1,4 @@
+import { ga4Context } from "@/lib/ga4-intake";
 import { resolveInboundCompany } from "@/lib/inbound-company";
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
@@ -11,6 +12,7 @@ const corsHeaders = {
 };
 
 const payloadSchema = z.object({
+  ga4: z.unknown().optional(),
   company: z.string().trim().min(1).max(200),
   contactName: z.string().trim().max(200).optional(),
   email: z.string().trim().email().max(200).optional(),
@@ -71,7 +73,22 @@ export const Route = createFileRoute("/api/public/inbound-lead")({
         if (!parsed.success) {
           return json({ error: "Invalid payload", details: parsed.error.flatten() }, 400);
         }
-        const lead = parsed.data;
+        const { ga4, ...lead } = parsed.data;
+        const analytics = ga4Context(ga4);
+        const recordAnalytics = async (leadId: string) => {
+          if (!analytics) return;
+          try {
+            const { error } = await supabaseAdmin.rpc("record_ga4_attribution", {
+              _company: companyId,
+              _lead: leadId,
+              _client: analytics.clientId,
+              ...(analytics.sessionId ? { _session: analytics.sessionId } : {}),
+            });
+            if (error) console.error("[ga4] Could not store website attribution");
+          } catch {
+            console.error("[ga4] Attribution storage unavailable");
+          }
+        };
 
         if (lead.contactType === "person") {
           if (!lead.submissionId || (!lead.email && !lead.phone)) {
@@ -155,6 +172,7 @@ export const Route = createFileRoute("/api/public/inbound-lead")({
           });
           if (activityError) return json({ error: activityError.message }, 500);
 
+          await recordAnalytics(existingId);
           return json({ status: "matched", leadId: existingId });
         }
 
@@ -192,6 +210,7 @@ export const Route = createFileRoute("/api/public/inbound-lead")({
         });
         if (activityError) return json({ error: activityError.message }, 500);
 
+        await recordAnalytics(created.id);
         return json({ status: "created", leadId: created.id }, 201);
       },
     },
