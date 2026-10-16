@@ -334,6 +334,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      record_ga4_attribution: {
+        Args: { _company: string; _lead: string; _client: string; _session?: string };
+        Returns: undefined;
+      };
       ingest_website_contact: {
         Args: { _company: string; _submission_id: string; _payload: Json };
         Returns: Json;
