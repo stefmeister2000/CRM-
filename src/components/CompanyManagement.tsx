@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building2, Plus } from "lucide-react";
+import { Building2, ChevronsUpDown, Plus, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getCompanyId, switchCompany } from "@/lib/company-context";
@@ -10,6 +11,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+function companyInitials(name: string) {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => Array.from(word)[0])
+    .join("")
+    .toLocaleUpperCase();
+}
 
 export function useCompanies() {
   return useQuery({
@@ -26,25 +47,97 @@ export function CompanySwitcher({ compact = false }: { compact?: boolean }) {
   const { data: me } = useCurrentUser();
   const { language } = useLanguage();
   const nl = language === "nl";
+  const current = companies.find((company) => company.id === getCompanyId());
   return (
-    <div className={compact ? "min-w-0 flex-1" : "mt-6 space-y-2"}>
-      {!compact && (
-        <p className="text-xs font-medium text-muted-foreground">{nl ? "Bedrijf" : "Company"}</p>
-      )}
-      <select
-        aria-label={nl ? "Bedrijf kiezen" : "Select company"}
-        value={getCompanyId() ?? ""}
-        className="h-11 w-full min-w-0 rounded-lg border bg-background px-2 text-sm font-medium"
-        disabled={!me || !companies.length}
-        onChange={(event) => me && switchCompany(me.id, event.target.value)}
-      >
-        {!companies.length && <option value="">{nl ? "Laden…" : "Loading…"}</option>}
-        {companies.map((company) => (
-          <option key={company.id} value={company.id}>
-            {company.name}
-          </option>
-        ))}
-      </select>
+    <div className={compact ? "min-w-0 flex-1" : "mt-6"}>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            aria-label={`${nl ? "Bedrijf wisselen" : "Switch company"}${current ? `: ${current.name}` : ""}`}
+            disabled={!me || !companies.length}
+            className={`group flex w-full min-w-0 items-center gap-2 rounded-xl border border-border/80 bg-secondary/30 text-left transition-colors hover:border-primary/25 hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60 data-[state=open]:border-primary/25 data-[state=open]:bg-secondary/70 ${compact ? "min-h-11 px-2.5 py-2" : "p-2.5"}`}
+          >
+            <span
+              aria-hidden="true"
+              className={`flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-xs font-semibold text-primary ${compact ? "hidden sm:flex" : ""}`}
+            >
+              {current ? companyInitials(current.name) : <Building2 className="size-4" />}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span
+                className={`block text-[10px] font-medium uppercase tracking-wider text-muted-foreground ${compact ? "hidden" : ""}`}
+              >
+                {nl ? "Werkruimte" : "Workspace"}
+              </span>
+              <span
+                className="block truncate text-[13px] font-semibold leading-5"
+                title={current?.name}
+              >
+                {current?.name ?? (nl ? "Laden…" : "Loading…")}
+              </span>
+            </span>
+            <ChevronsUpDown
+              aria-hidden="true"
+              className="size-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground"
+            />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align={compact ? "end" : "start"}
+          sideOffset={8}
+          collisionPadding={12}
+          className="w-72 max-w-[calc(100vw-1.5rem)] rounded-xl p-1.5 shadow-lg"
+        >
+          <DropdownMenuLabel className="px-2.5 py-2 text-xs font-medium text-muted-foreground">
+            {nl ? "Bedrijf wisselen" : "Switch company"}
+          </DropdownMenuLabel>
+          <DropdownMenuRadioGroup
+            value={current?.id ?? ""}
+            onValueChange={(id) => me && id !== current?.id && switchCompany(me.id, id)}
+          >
+            {companies.map((company) => (
+              <DropdownMenuRadioItem
+                key={company.id}
+                value={company.id}
+                textValue={company.name}
+                className="min-h-12 cursor-pointer gap-3 rounded-lg py-2 pl-2.5 pr-8 data-[state=checked]:bg-secondary/70 [&>span.absolute]:right-3 [&>span.absolute]:left-auto"
+              >
+                <span
+                  aria-hidden="true"
+                  className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-xs font-semibold text-primary"
+                >
+                  {companyInitials(company.name)}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium" title={company.name}>
+                    {company.name}
+                  </span>
+                  {company.id === current?.id && (
+                    <span className="block text-[11px] text-muted-foreground">
+                      {nl ? "Huidige werkruimte" : "Current workspace"}
+                    </span>
+                  )}
+                </span>
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+          {current?.role === "admin" && (
+            <>
+              <DropdownMenuSeparator className="mx-1 my-1.5" />
+              <DropdownMenuItem
+                asChild
+                className="min-h-10 cursor-pointer rounded-lg px-2.5 text-muted-foreground"
+              >
+                <Link to="/settings" hash="companies">
+                  <Settings2 aria-hidden="true" />
+                  {nl ? "Bedrijven beheren" : "Manage companies"}
+                </Link>
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
@@ -66,7 +159,7 @@ export function CompanyManagement() {
     },
   });
   return (
-    <Card>
+    <Card id="companies" className="scroll-mt-6">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Building2 className="size-5" />
