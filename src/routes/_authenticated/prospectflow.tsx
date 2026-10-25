@@ -7,14 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { LeadDocumentsButton } from "@/components/LeadDocuments";
 import { DealValueEditor } from "@/components/DealValueEditor";
-import {
-  HealthfactorCategoryBadge,
-  HealthfactorCategoryFilter,
-} from "@/components/HealthfactorCategories";
-import {
-  matchesHealthfactorCategory,
-  type HealthfactorFilter,
-} from "@/lib/healthfactor-categories";
+import { LeadCategoryBadge, LeadCategoryFilter } from "@/components/LeadCategories";
+import { matchesLeadCategory, type LeadCategoryFilterValue } from "@/lib/lead-categories";
 import { useLanguage } from "@/hooks/use-language";
 import { usePipelineLeads, pipelineQueryKey, type Lead } from "@/hooks/use-pipeline-leads";
 import { STAGES, formatMoney, type Stage } from "@/lib/sales";
@@ -36,7 +30,7 @@ const queryKey = pipelineQueryKey;
 
 function ProspectFlow() {
   const { company } = Route.useRouteContext();
-  const [categoryFilter, setCategoryFilter] = useState<HealthfactorFilter>("all");
+  const [categoryFilter, setCategoryFilter] = useState<LeadCategoryFilterValue>("all");
   const { language } = useLanguage();
   const nl = language === "nl";
   const client = useQueryClient();
@@ -91,9 +85,7 @@ function ProspectFlow() {
       .toLowerCase()
       .includes(search.toLowerCase()),
   );
-  const filtered = matchingLeads.filter((lead) =>
-    matchesHealthfactorCategory(lead, categoryFilter),
-  );
+  const filtered = matchingLeads.filter((lead) => matchesLeadCategory(lead, categoryFilter));
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -120,7 +112,7 @@ function ProspectFlow() {
         </div>
       ) : (
         <section className="space-y-4" aria-label="Pipeline">
-          <HealthfactorCategoryFilter
+          <LeadCategoryFilter
             companyId={company.id}
             leads={matchingLeads}
             value={categoryFilter}
@@ -211,7 +203,7 @@ function ProspectFlow() {
                         <p className="mt-1 text-xs text-muted-foreground">
                           {lead.contact_name || (nl ? "Geen contactpersoon" : "No contact")}
                         </p>
-                        <HealthfactorCategoryBadge lead={lead} className="mt-2" />
+                        <LeadCategoryBadge lead={lead} className="mt-2" />
                         <DealValueEditor
                           id={lead.id}
                           company={lead.company}

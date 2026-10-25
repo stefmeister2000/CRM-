@@ -1,10 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { HealthfactorCategoryFilter } from "@/components/HealthfactorCategories";
-import {
-  matchesHealthfactorCategory,
-  type HealthfactorFilter,
-} from "@/lib/healthfactor-categories";
+import { LeadCategoryFilter } from "@/components/LeadCategories";
+import { matchesLeadCategory, type LeadCategoryFilterValue } from "@/lib/lead-categories";
 import { startOfWeek, addWeeks, format } from "date-fns";
 import { ArrowUpRight, Users, TrendingUp, Target, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,11 +16,11 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 function Dashboard() {
   const { company } = Route.useRouteContext();
-  const [categoryFilter, setCategoryFilter] = useState<HealthfactorFilter>("all");
+  const [categoryFilter, setCategoryFilter] = useState<LeadCategoryFilterValue>("all");
   const { language } = useLanguage();
   const nl = language === "nl";
   const { data: allLeads = [], isPending, isError, refetch, isFetching } = usePipelineLeads();
-  const leads = allLeads.filter((lead) => matchesHealthfactorCategory(lead, categoryFilter));
+  const leads = allLeads.filter((lead) => matchesLeadCategory(lead, categoryFilter));
   const now = new Date();
   const monday = startOfWeek(now, { weekStartsOn: 1 });
   const weeks = Array.from({ length: 8 }, (_, i) => {
@@ -115,7 +112,7 @@ function Dashboard() {
         </div>
       ) : (
         <>
-          <HealthfactorCategoryFilter
+          <LeadCategoryFilter
             companyId={company.id}
             leads={allLeads}
             value={categoryFilter}

@@ -1,12 +1,12 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  healthfactorCategory,
-  isHealthfactorCompany,
+  companyCategories,
+  leadCategory,
   type CategorizedLead,
-  type HealthfactorCategory,
-  type HealthfactorFilter,
-} from "@/lib/healthfactor-categories";
+  type LeadCategory,
+  type LeadCategoryFilterValue,
+} from "@/lib/lead-categories";
 import { cn } from "@/lib/utils";
 
 const styles = {
@@ -31,19 +31,29 @@ const styles = {
     selected:
       "border-slate-400 bg-slate-100 text-slate-900 hover:bg-slate-200 hover:text-slate-900",
   },
-} satisfies Record<
-  HealthfactorCategory,
-  { label: string; dot: string; badge: string; selected: string }
->;
+  agency: {
+    label: "Verkoop Studio",
+    dot: "bg-blue-600",
+    badge: "border-blue-200 bg-blue-50 text-blue-800",
+    selected: "border-blue-400 bg-blue-50 text-blue-900 hover:bg-blue-100 hover:text-blue-900",
+  },
+  academy: {
+    label: "Academy",
+    dot: "bg-violet-500",
+    badge: "border-violet-200 bg-violet-50 text-violet-800",
+    selected:
+      "border-violet-400 bg-violet-50 text-violet-900 hover:bg-violet-100 hover:text-violet-900",
+  },
+} satisfies Record<LeadCategory, { label: string; dot: string; badge: string; selected: string }>;
 
-export function HealthfactorCategoryBadge({
+export function LeadCategoryBadge({
   lead,
   className,
 }: {
   lead: CategorizedLead;
   className?: string;
 }) {
-  const category = healthfactorCategory(lead);
+  const category = leadCategory(lead);
   if (!category) return null;
   const style = styles[category];
   return (
@@ -54,7 +64,7 @@ export function HealthfactorCategoryBadge({
   );
 }
 
-export function HealthfactorCategoryFilter({
+export function LeadCategoryFilter({
   companyId,
   leads,
   value,
@@ -62,13 +72,21 @@ export function HealthfactorCategoryFilter({
 }: {
   companyId: string;
   leads: CategorizedLead[];
-  value: HealthfactorFilter;
-  onChange: (value: HealthfactorFilter) => void;
+  value: LeadCategoryFilterValue;
+  onChange: (value: LeadCategoryFilterValue) => void;
 }) {
-  if (!isHealthfactorCompany(companyId)) return null;
-  const counts = { all: 0, boxing: 0, gym: 0, unknown: 0 };
+  const config = companyCategories(companyId);
+  if (!config) return null;
+  const counts: Record<LeadCategoryFilterValue, number> = {
+    all: 0,
+    boxing: 0,
+    gym: 0,
+    unknown: 0,
+    agency: 0,
+    academy: 0,
+  };
   for (const lead of leads) {
-    const category = healthfactorCategory(lead);
+    const category = leadCategory(lead);
     if (category) {
       counts.all++;
       counts[category]++;
@@ -76,9 +94,9 @@ export function HealthfactorCategoryFilter({
   }
   return (
     <fieldset className="min-w-0 rounded-xl border bg-card p-4">
-      <legend className="px-1 text-sm font-semibold">Interesse</legend>
+      <legend className="px-1 text-sm font-semibold">{config.legend}</legend>
       <div className="flex flex-wrap gap-2">
-        {(["all", "boxing", "gym", "unknown"] as const).map((category) => {
+        {(["all", ...config.categories] as const).map((category) => {
           const style = category === "all" ? null : styles[category];
           const selected = value === category;
           return (
