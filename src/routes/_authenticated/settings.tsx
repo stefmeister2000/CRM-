@@ -38,6 +38,7 @@ import {
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { ConnectAI } from "@/components/ConnectAI";
 import { InboundWebsite } from "@/components/InboundWebsite";
+import { CurrentExport } from "@/components/CurrentExport";
 import {
   OPEN_STAGES,
   PIPELINE_STEPS,
@@ -729,8 +730,9 @@ function SettingsPage() {
         </TabsContent>
 
         {isAdmin && (
-          <TabsContent value="website">
+          <TabsContent value="website" className="space-y-8">
             <InboundWebsite />
+            <CurrentExport />
           </TabsContent>
         )}
       </Tabs>

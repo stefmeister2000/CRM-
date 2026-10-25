@@ -5,6 +5,7 @@ import {
   VERKOOP_STUDIO_COMPANY_ID,
   companyCategories,
   leadCategory,
+  leadCategoryLabel,
   matchesLeadCategory,
 } from "../src/lib/lead-categories.ts";
 
@@ -20,6 +21,8 @@ test("Verkoop Studio separates academy signups from agency leads", () => {
   assert.equal(matchesLeadCategory(verkoop("verkoop.studio academy"), "agency"), false);
   assert.equal(matchesLeadCategory(verkoop("verkoop.studio website"), "agency"), true);
   assert.equal(matchesLeadCategory(verkoop("verkoop.studio academy"), "all"), true);
+  assert.equal(leadCategoryLabel(verkoop("verkoop.studio academy")), "Academy");
+  assert.equal(leadCategoryLabel(verkoop("verkoop.studio website")), "Verkoop Studio");
 });
 
 test("Healthfactor keeps its boxing and gym interests", () => {
@@ -33,5 +36,6 @@ test("other companies have no categories and are never filtered out", () => {
   const other = { company_id: "11111111-1111-4111-8111-111111111111", campaign: "academy" };
   assert.equal(companyCategories(other.company_id), null);
   assert.equal(leadCategory(other), null);
+  assert.equal(leadCategoryLabel(other), null);
   assert.equal(matchesLeadCategory(other, "academy"), true);
 });

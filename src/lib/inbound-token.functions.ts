@@ -6,7 +6,7 @@ import type { Database } from "@/integrations/supabase/types";
 
 const SETTING_KEY = "inbound_lead_token";
 
-async function assertAdmin(context: { supabase: SupabaseClient<Database>; userId: string }) {
+export async function assertAdmin(context: { supabase: SupabaseClient<Database>; userId: string }) {
   const { data: isAdmin, error } = await context.supabase.rpc("has_role", {
     _user_id: context.userId,
     _role: "admin",

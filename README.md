@@ -72,3 +72,11 @@ Delivery uses a private outbox and the `crm-ga4-meetings` database job every min
 `submitted` means Google returned HTTP 2xx, not proof that the event appeared in reports. HTTP 429/5xx responses receive up to five attempts; ambiguous network outcomes are held as `uncertain` for manual review instead of blindly retrying. Pending events expire before Google's 72-hour backdating limit. A disabled/missing-secret connection does not send events. Inspect status counts in `crm_private.ga4_outbox` and the cron run history when diagnosing delivery; never print Vault secrets or request URLs containing them.
 
 Validation: `npm run test:integrations`, `tsc --noEmit`, production build, and `tests/ga4-database.sql` (transaction-only rollback test, no external requests). The private tables intentionally have deny-by-default RLS and no client grants. Mark `generate_lead` and `meeting_booked` as key events in GA4 for conversion reporting.
+
+## Current reporting export
+
+`GET /api/integrations/current/export` lets the Current marketing dashboard read lead counts and stages, server-to-server. It needs no migration: the per-company token is stored in `app_settings` under `current_export_token`. Admins create, copy and rotate it, and copy the Workspace ID, in Settings → **Website requests** → **Current (marketing dashboard)**. Rotating the token immediately disables the old one.
+
+The request must send `Authorization: Bearer <64 hex characters>`. The token alone selects the company, and a malformed or unknown token returns 401. Without the server-side Supabase configuration the endpoint returns 503, and other methods return 405. Responses use `Cache-Control: no-store`, are never redirected, and contain schema version 1 with workspace, currency, timezone and up to 1000 of the newest leads (including soft-deleted leads with `deletedAt`). If there are more, `complete` is `false`. Each lead carries only id, creation time, stage, value, source, campaign (max 200 characters) and category label: never names, email addresses, phone numbers, notes or company names.
+
+Validation: `npm run test:integrations` (`tests/current-export.test.mjs`), `npx tsc --noEmit`, `npm run build`.

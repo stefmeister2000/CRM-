@@ -26,6 +26,7 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
 import { Route as OauthConsentRouteImport } from './routes/oauth.consent'
 import { Route as ApiPublicInboundLeadRouteImport } from './routes/api/public/inbound-lead'
+import { Route as ApiIntegrationsCurrentExportRouteImport } from './routes/api/integrations/current/export'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -113,6 +114,12 @@ const ApiPublicInboundLeadRoute = ApiPublicInboundLeadRouteImport.update({
   path: '/api/public/inbound-lead',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiIntegrationsCurrentExportRoute =
+  ApiIntegrationsCurrentExportRouteImport.update({
+    id: '/api/integrations/current/export',
+    path: '/api/integrations/current/export',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -131,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/team': typeof AuthenticatedTeamRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/api/public/inbound-lead': typeof ApiPublicInboundLeadRoute
+  '/api/integrations/current/export': typeof ApiIntegrationsCurrentExportRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -149,6 +157,7 @@ export interface FileRoutesByTo {
   '/team': typeof AuthenticatedTeamRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/api/public/inbound-lead': typeof ApiPublicInboundLeadRoute
+  '/api/integrations/current/export': typeof ApiIntegrationsCurrentExportRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -169,6 +178,7 @@ export interface FileRoutesById {
   '/_authenticated/team': typeof AuthenticatedTeamRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/api/public/inbound-lead': typeof ApiPublicInboundLeadRoute
+  '/api/integrations/current/export': typeof ApiIntegrationsCurrentExportRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -189,6 +199,7 @@ export interface FileRouteTypes {
     | '/team'
     | '/oauth/consent'
     | '/api/public/inbound-lead'
+    | '/api/integrations/current/export'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -207,6 +218,7 @@ export interface FileRouteTypes {
     | '/team'
     | '/oauth/consent'
     | '/api/public/inbound-lead'
+    | '/api/integrations/current/export'
   id:
     | '__root__'
     | '/'
@@ -226,6 +238,7 @@ export interface FileRouteTypes {
     | '/_authenticated/team'
     | '/oauth/consent'
     | '/api/public/inbound-lead'
+    | '/api/integrations/current/export'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -238,6 +251,7 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   OauthConsentRoute: typeof OauthConsentRoute
   ApiPublicInboundLeadRoute: typeof ApiPublicInboundLeadRoute
+  ApiIntegrationsCurrentExportRoute: typeof ApiIntegrationsCurrentExportRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -361,6 +375,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicInboundLeadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/integrations/current/export': {
+      id: '/api/integrations/current/export'
+      path: '/api/integrations/current/export'
+      fullPath: '/api/integrations/current/export'
+      preLoaderRoute: typeof ApiIntegrationsCurrentExportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -400,6 +421,7 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   OauthConsentRoute: OauthConsentRoute,
   ApiPublicInboundLeadRoute: ApiPublicInboundLeadRoute,
+  ApiIntegrationsCurrentExportRoute: ApiIntegrationsCurrentExportRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

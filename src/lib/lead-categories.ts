@@ -5,6 +5,15 @@ export type LeadCategory = "boxing" | "gym" | "unknown" | "agency" | "academy";
 export type LeadCategoryFilterValue = "all" | LeadCategory;
 export type CategorizedLead = { company_id: string; campaign: string | null };
 
+// Shared by the CRM badges/filters and the Current reporting export.
+export const LEAD_CATEGORY_LABELS: Record<LeadCategory, string> = {
+  boxing: "Boksen",
+  gym: "Gym",
+  unknown: "Nog onbekend",
+  agency: "Verkoop Studio",
+  academy: "Academy",
+};
+
 type CompanyCategories = {
   legend: string;
   categories: readonly LeadCategory[];
@@ -37,6 +46,11 @@ export const companyCategories = (companyId: string) => companies[companyId] ?? 
 export function leadCategory(lead: CategorizedLead): LeadCategory | null {
   const config = companyCategories(lead.company_id);
   return config ? config.classify(lead.campaign ?? "") : null;
+}
+
+export function leadCategoryLabel(lead: CategorizedLead): string | null {
+  const category = leadCategory(lead);
+  return category ? LEAD_CATEGORY_LABELS[category] : null;
 }
 
 export function matchesLeadCategory(lead: CategorizedLead, filter: LeadCategoryFilterValue) {

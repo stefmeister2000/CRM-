@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  LEAD_CATEGORY_LABELS,
   companyCategories,
   leadCategory,
   type CategorizedLead,
@@ -11,34 +12,34 @@ import { cn } from "@/lib/utils";
 
 const styles = {
   boxing: {
-    label: "Boksen",
+    label: LEAD_CATEGORY_LABELS.boxing,
     dot: "bg-orange-500",
     badge: "border-orange-200 bg-orange-50 text-orange-800",
     selected:
       "border-orange-400 bg-orange-50 text-orange-900 hover:bg-orange-100 hover:text-orange-900",
   },
   gym: {
-    label: "Gym",
+    label: LEAD_CATEGORY_LABELS.gym,
     dot: "bg-emerald-500",
     badge: "border-emerald-200 bg-emerald-50 text-emerald-800",
     selected:
       "border-emerald-400 bg-emerald-50 text-emerald-900 hover:bg-emerald-100 hover:text-emerald-900",
   },
   unknown: {
-    label: "Nog onbekend",
+    label: LEAD_CATEGORY_LABELS.unknown,
     dot: "bg-slate-400",
     badge: "border-slate-200 bg-slate-50 text-slate-600",
     selected:
       "border-slate-400 bg-slate-100 text-slate-900 hover:bg-slate-200 hover:text-slate-900",
   },
   agency: {
-    label: "Verkoop Studio",
+    label: LEAD_CATEGORY_LABELS.agency,
     dot: "bg-blue-600",
     badge: "border-blue-200 bg-blue-50 text-blue-800",
     selected: "border-blue-400 bg-blue-50 text-blue-900 hover:bg-blue-100 hover:text-blue-900",
   },
   academy: {
-    label: "Academy",
+    label: LEAD_CATEGORY_LABELS.academy,
     dot: "bg-violet-500",
     badge: "border-violet-200 bg-violet-50 text-violet-800",
     selected:
