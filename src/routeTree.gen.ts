@@ -25,7 +25,9 @@ import { Route as AuthenticatedProspectflowRouteImport } from './routes/_authent
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
 import { Route as OauthConsentRouteImport } from './routes/oauth.consent'
+import { Route as AuthenticatedCurrentConnectRouteImport } from './routes/_authenticated/current.connect'
 import { Route as ApiPublicInboundLeadRouteImport } from './routes/api/public/inbound-lead'
+import { Route as ApiIntegrationsCurrentExchangeRouteImport } from './routes/api/integrations/current/exchange'
 import { Route as ApiIntegrationsCurrentExportRouteImport } from './routes/api/integrations/current/export'
 
 const IndexRoute = IndexRouteImport.update({
@@ -109,11 +111,23 @@ const OauthConsentRoute = OauthConsentRouteImport.update({
   path: '/oauth/consent',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedCurrentConnectRoute =
+  AuthenticatedCurrentConnectRouteImport.update({
+    id: '/current/connect',
+    path: '/current/connect',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiPublicInboundLeadRoute = ApiPublicInboundLeadRouteImport.update({
   id: '/api/public/inbound-lead',
   path: '/api/public/inbound-lead',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiIntegrationsCurrentExchangeRoute =
+  ApiIntegrationsCurrentExchangeRouteImport.update({
+    id: '/api/integrations/current/exchange',
+    path: '/api/integrations/current/exchange',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiIntegrationsCurrentExportRoute =
   ApiIntegrationsCurrentExportRouteImport.update({
     id: '/api/integrations/current/export',
@@ -137,7 +151,9 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/team': typeof AuthenticatedTeamRoute
   '/oauth/consent': typeof OauthConsentRoute
+  '/current/connect': typeof AuthenticatedCurrentConnectRoute
   '/api/public/inbound-lead': typeof ApiPublicInboundLeadRoute
+  '/api/integrations/current/exchange': typeof ApiIntegrationsCurrentExchangeRoute
   '/api/integrations/current/export': typeof ApiIntegrationsCurrentExportRoute
 }
 export interface FileRoutesByTo {
@@ -156,7 +172,9 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/team': typeof AuthenticatedTeamRoute
   '/oauth/consent': typeof OauthConsentRoute
+  '/current/connect': typeof AuthenticatedCurrentConnectRoute
   '/api/public/inbound-lead': typeof ApiPublicInboundLeadRoute
+  '/api/integrations/current/exchange': typeof ApiIntegrationsCurrentExchangeRoute
   '/api/integrations/current/export': typeof ApiIntegrationsCurrentExportRoute
 }
 export interface FileRoutesById {
@@ -177,7 +195,9 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/team': typeof AuthenticatedTeamRoute
   '/oauth/consent': typeof OauthConsentRoute
+  '/_authenticated/current/connect': typeof AuthenticatedCurrentConnectRoute
   '/api/public/inbound-lead': typeof ApiPublicInboundLeadRoute
+  '/api/integrations/current/exchange': typeof ApiIntegrationsCurrentExchangeRoute
   '/api/integrations/current/export': typeof ApiIntegrationsCurrentExportRoute
 }
 export interface FileRouteTypes {
@@ -198,7 +218,9 @@ export interface FileRouteTypes {
     | '/settings'
     | '/team'
     | '/oauth/consent'
+    | '/current/connect'
     | '/api/public/inbound-lead'
+    | '/api/integrations/current/exchange'
     | '/api/integrations/current/export'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -217,7 +239,9 @@ export interface FileRouteTypes {
     | '/settings'
     | '/team'
     | '/oauth/consent'
+    | '/current/connect'
     | '/api/public/inbound-lead'
+    | '/api/integrations/current/exchange'
     | '/api/integrations/current/export'
   id:
     | '__root__'
@@ -237,7 +261,9 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/team'
     | '/oauth/consent'
+    | '/_authenticated/current/connect'
     | '/api/public/inbound-lead'
+    | '/api/integrations/current/exchange'
     | '/api/integrations/current/export'
   fileRoutesById: FileRoutesById
 }
@@ -251,6 +277,7 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   OauthConsentRoute: typeof OauthConsentRoute
   ApiPublicInboundLeadRoute: typeof ApiPublicInboundLeadRoute
+  ApiIntegrationsCurrentExchangeRoute: typeof ApiIntegrationsCurrentExchangeRoute
   ApiIntegrationsCurrentExportRoute: typeof ApiIntegrationsCurrentExportRoute
 }
 
@@ -368,11 +395,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OauthConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/current/connect': {
+      id: '/_authenticated/current/connect'
+      path: '/current/connect'
+      fullPath: '/current/connect'
+      preLoaderRoute: typeof AuthenticatedCurrentConnectRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/inbound-lead': {
       id: '/api/public/inbound-lead'
       path: '/api/public/inbound-lead'
       fullPath: '/api/public/inbound-lead'
       preLoaderRoute: typeof ApiPublicInboundLeadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/integrations/current/exchange': {
+      id: '/api/integrations/current/exchange'
+      path: '/api/integrations/current/exchange'
+      fullPath: '/api/integrations/current/exchange'
+      preLoaderRoute: typeof ApiIntegrationsCurrentExchangeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/integrations/current/export': {
@@ -394,6 +435,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProspectflowRoute: typeof AuthenticatedProspectflowRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedTeamRoute: typeof AuthenticatedTeamRoute
+  AuthenticatedCurrentConnectRoute: typeof AuthenticatedCurrentConnectRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -405,6 +447,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProspectflowRoute: AuthenticatedProspectflowRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedTeamRoute: AuthenticatedTeamRoute,
+  AuthenticatedCurrentConnectRoute: AuthenticatedCurrentConnectRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -421,6 +464,7 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   OauthConsentRoute: OauthConsentRoute,
   ApiPublicInboundLeadRoute: ApiPublicInboundLeadRoute,
+  ApiIntegrationsCurrentExchangeRoute: ApiIntegrationsCurrentExchangeRoute,
   ApiIntegrationsCurrentExportRoute: ApiIntegrationsCurrentExportRoute,
 }
 export const routeTree = rootRouteImport
