@@ -1,7 +1,7 @@
 export const HEALTHFACTOR_COMPANY_ID = "7cf72b35-4445-46db-a4c4-26563ac57dca";
 export const VERKOOP_STUDIO_COMPANY_ID = "00000000-0000-4000-8000-000000000001";
 
-export type LeadCategory = "boxing" | "gym" | "unknown" | "agency" | "academy";
+export type LeadCategory = "boxing" | "gym" | "unknown" | "agency" | "academy" | "giveaway";
 export type LeadCategoryFilterValue = "all" | LeadCategory;
 export type CategorizedLead = { company_id: string; campaign: string | null };
 
@@ -12,6 +12,7 @@ export const LEAD_CATEGORY_LABELS: Record<LeadCategory, string> = {
   unknown: "Nog onbekend",
   agency: "Verkoop Studio",
   academy: "Academy",
+  giveaway: "Gratis website",
 };
 
 type CompanyCategories = {
@@ -35,9 +36,14 @@ const companies: Record<string, CompanyCategories> = {
   },
   [VERKOOP_STUDIO_COMPANY_ID]: {
     legend: "Soort lead",
-    categories: ["agency", "academy"],
-    // The academy signup form sends campaign "verkoop.studio academy"; everything else is agency work.
-    classify: (campaign) => (/\bacademy\b/i.test(campaign) ? "academy" : "agency"),
+    categories: ["agency", "academy", "giveaway"],
+    // The academy signup form sends campaign "verkoop.studio academy" and the
+    // entry form on /gratis-website sends "Verkoop Studio gratis website".
+    // Everything else is agency work. Read the campaign, never the notes.
+    classify: (campaign) => {
+      if (/\bgratis[\s-]?website\b/i.test(campaign)) return "giveaway";
+      return /\bacademy\b/i.test(campaign) ? "academy" : "agency";
+    },
   },
 };
 

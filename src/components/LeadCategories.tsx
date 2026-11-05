@@ -45,6 +45,12 @@ const styles = {
     selected:
       "border-violet-400 bg-violet-50 text-violet-900 hover:bg-violet-100 hover:text-violet-900",
   },
+  giveaway: {
+    label: LEAD_CATEGORY_LABELS.giveaway,
+    dot: "bg-amber-500",
+    badge: "border-amber-200 bg-amber-50 text-amber-800",
+    selected: "border-amber-400 bg-amber-50 text-amber-900 hover:bg-amber-100 hover:text-amber-900",
+  },
 } satisfies Record<LeadCategory, { label: string; dot: string; badge: string; selected: string }>;
 
 export function LeadCategoryBadge({
@@ -85,6 +91,7 @@ export function LeadCategoryFilter({
     unknown: 0,
     agency: 0,
     academy: 0,
+    giveaway: 0,
   };
   for (const lead of leads) {
     const category = leadCategory(lead);
