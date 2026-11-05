@@ -17,7 +17,11 @@ test("Verkoop Studio separates academy signups from agency leads", () => {
   assert.equal(leadCategory(verkoop("verkoop.studio website")), "agency");
   assert.equal(leadCategory(verkoop(null)), "agency");
   assert.equal(leadCategory(verkoop("Gent outreach")), "agency");
-  assert.deepEqual(companyCategories(VERKOOP_STUDIO_COMPANY_ID).categories, ["agency", "academy"]);
+  assert.deepEqual(companyCategories(VERKOOP_STUDIO_COMPANY_ID).categories, [
+    "agency",
+    "academy",
+    "giveaway",
+  ]);
   assert.equal(matchesLeadCategory(verkoop("verkoop.studio academy"), "agency"), false);
   assert.equal(matchesLeadCategory(verkoop("verkoop.studio website"), "agency"), true);
   assert.equal(matchesLeadCategory(verkoop("verkoop.studio academy"), "all"), true);
@@ -38,4 +42,14 @@ test("other companies have no categories and are never filtered out", () => {
   assert.equal(leadCategory(other), null);
   assert.equal(leadCategoryLabel(other), null);
   assert.equal(matchesLeadCategory(other, "academy"), true);
+});
+
+test("the free-website campaign gets its own badge, apart from agency work", () => {
+  assert.equal(leadCategory(verkoop("Verkoop Studio gratis website")), "giveaway");
+  assert.equal(leadCategoryLabel(verkoop("Verkoop Studio gratis website")), "Gratis website");
+  assert.equal(leadCategory(verkoop("verkoop.studio website")), "agency");
+  assert.equal(leadCategory(verkoop("Verkoop Studio academy")), "academy");
+  assert.equal(matchesLeadCategory(verkoop("Verkoop Studio gratis website"), "agency"), false);
+  assert.equal(matchesLeadCategory(verkoop("Verkoop Studio gratis website"), "giveaway"), true);
+  assert.equal(matchesLeadCategory(verkoop("Verkoop Studio gratis website"), "all"), true);
 });

@@ -1,5 +1,6 @@
 import { ga4Context } from "@/lib/ga4-intake";
 import { resolveInboundCompany } from "@/lib/inbound-company";
+import { matchedLeadCampaign } from "@/lib/inbound-campaign";
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
@@ -141,20 +142,31 @@ export const Route = createFileRoute("/api/public/inbound-lead")({
         if (existingId) {
           const { data: current, error: currentError } = await supabaseAdmin
             .from("leads")
-            .select("notes")
+            .select("notes, campaign")
             .eq("id", existingId)
             .eq("company_id", companyId)
             .single();
           if (currentError) return json({ error: "Could not load the matched lead." }, 500);
+
+          // A known contact can enter a running campaign. Re-tag the lead so
+          // it turns up with the other entrants, and keep what it carried
+          // before in the note.
+          const campaign = matchedLeadCampaign(current?.campaign, lead.campaign ?? defaultCampaign);
+          const noteLines = [
+            current?.notes,
+            noteLine,
+            campaign.replaced
+              ? `Campagne gewijzigd (${stamp}): ${campaign.replaced} → ${campaign.campaign}`
+              : null,
+          ].filter(Boolean);
 
           const { error } = await supabaseAdmin
             .from("leads")
             .update({
               last_touch_at: stamp,
               deleted_at: null,
-              ...(noteLine
-                ? { notes: [current?.notes, noteLine].filter(Boolean).join("\n\n") }
-                : {}),
+              ...(noteLine || campaign.replaced ? { notes: noteLines.join("\n\n") } : {}),
+              ...(campaign.campaign ? { campaign: campaign.campaign } : {}),
               ...(lead.contactName ? { contact_name: lead.contactName } : {}),
               ...(lead.phone ? { phone: lead.phone } : {}),
               ...(lead.email ? { email: lead.email } : {}),
